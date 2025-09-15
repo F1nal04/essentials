@@ -2,11 +2,15 @@ package f1nal.essentials;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import com.mojang.brigadier.tree.LiteralCommandNode;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.minecraft.command.CommandRegistryAccess;
 import net.minecraft.command.argument.EntityArgumentType;
+import net.minecraft.inventory.SimpleInventory;
 import net.minecraft.item.ItemStack;
+import net.minecraft.screen.GenericContainerScreenHandler;
+import net.minecraft.screen.SimpleNamedScreenHandlerFactory;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -29,6 +33,7 @@ public class Essentials implements ModInitializer {
         CommandRegistrationCallback.EVENT.register(this::registerRepairCommand);
         CommandRegistrationCallback.EVENT.register(this::registerHealCommand);
         CommandRegistrationCallback.EVENT.register(this::registerFeedCommand);
+        CommandRegistrationCallback.EVENT.register(this::registerDisposalCommand);
     }
 
     private void registerRepairCommand(CommandDispatcher<ServerCommandSource> dispatcher, CommandRegistryAccess registryAccess, CommandManager.RegistrationEnvironment environment) {
@@ -126,6 +131,37 @@ public class Essentials implements ModInitializer {
         } else {
             source.sendFeedback(() -> Text.literal("Fed " + target.getName().getString() + " to full hunger and saturation."), true);
             target.sendMessage(Text.literal("You were fed by " + source.getName() + "."));
+        }
+
+        return 1;
+    }
+
+    private void registerDisposalCommand(CommandDispatcher<ServerCommandSource> dispatcher, CommandRegistryAccess registryAccess, CommandManager.RegistrationEnvironment environment) {
+        LiteralArgumentBuilder<ServerCommandSource> disposal = CommandManager.literal("disposal")
+                .executes(ctx -> openDisposal(ctx.getSource(), ctx.getSource().getPlayer()));
+        LiteralArgumentBuilder<ServerCommandSource> trash = CommandManager.literal("trash")
+                .executes(ctx -> openDisposal(ctx.getSource(), ctx.getSource().getPlayer()));
+        LiteralArgumentBuilder<ServerCommandSource> trashcan = CommandManager.literal("trashcan")
+                .executes(ctx -> openDisposal(ctx.getSource(), ctx.getSource().getPlayer()));
+
+        dispatcher.register(disposal);
+        dispatcher.register(trash);
+        dispatcher.register(trashcan);
+    }
+
+    private int openDisposal(ServerCommandSource source, ServerPlayerEntity target) {
+        if (target == null) {
+            source.sendError(Text.literal("You must be a player to use this command."));
+            return 0;
+        }
+
+        target.openHandledScreen(new SimpleNamedScreenHandlerFactory(
+                (syncId, playerInventory, player) -> GenericContainerScreenHandler.createGeneric9x3(syncId, playerInventory, new SimpleInventory(27)),
+                Text.literal("Disposal")
+        ));
+
+        if (source.getEntity() == target) {
+            source.sendFeedback(() -> Text.literal("Opened disposal."), false);
         }
 
         return 1;
