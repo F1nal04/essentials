@@ -27,6 +27,8 @@ public class Essentials implements ModInitializer {
 
     private void registerCommands() {
         CommandRegistrationCallback.EVENT.register(this::registerRepairCommand);
+        CommandRegistrationCallback.EVENT.register(this::registerHealCommand);
+        CommandRegistrationCallback.EVENT.register(this::registerFeedCommand);
     }
 
     private void registerRepairCommand(CommandDispatcher<ServerCommandSource> dispatcher, CommandRegistryAccess registryAccess, CommandManager.RegistrationEnvironment environment) {
@@ -64,6 +66,66 @@ public class Essentials implements ModInitializer {
         } else {
             source.sendFeedback(() -> Text.literal("Repaired " + target.getName().getString() + "'s main-hand item: " + stack.getName().getString()), true);
             target.sendMessage(Text.literal("Your main-hand item was repaired by " + source.getName() + "."));
+        }
+
+        return 1;
+    }
+
+    private void registerHealCommand(CommandDispatcher<ServerCommandSource> dispatcher, CommandRegistryAccess registryAccess, CommandManager.RegistrationEnvironment environment) {
+        LiteralArgumentBuilder<ServerCommandSource> root = CommandManager.literal("heal")
+                .requires(source -> source.hasPermissionLevel(2))
+                .executes(ctx -> heal(ctx.getSource(), ctx.getSource().getPlayer()))
+                .then(CommandManager.argument("target", EntityArgumentType.player())
+                        .executes(ctx -> heal(ctx.getSource(), EntityArgumentType.getPlayer(ctx, "target"))));
+
+        dispatcher.register(root);
+    }
+
+    private int heal(ServerCommandSource source, ServerPlayerEntity target) {
+        if (target == null) {
+            source.sendError(Text.literal("You must be a player to use this command without a target."));
+            return 0;
+        }
+
+        float maxHealth = target.getMaxHealth();
+        target.setHealth(maxHealth);
+        target.getHungerManager().setFoodLevel(20);
+        target.getHungerManager().setSaturationLevel(20.0F);
+
+        if (source.getEntity() == target) {
+            source.sendFeedback(() -> Text.literal("Healed you to full health (" + maxHealth + ")"), false);
+        } else {
+            source.sendFeedback(() -> Text.literal("Healed " + target.getName().getString() + " to full health (" + maxHealth + ")"), true);
+            target.sendMessage(Text.literal("You were healed by " + source.getName() + "."));
+        }
+
+        return 1;
+    }
+
+    private void registerFeedCommand(CommandDispatcher<ServerCommandSource> dispatcher, CommandRegistryAccess registryAccess, CommandManager.RegistrationEnvironment environment) {
+        LiteralArgumentBuilder<ServerCommandSource> root = CommandManager.literal("feed")
+                .requires(source -> source.hasPermissionLevel(2))
+                .executes(ctx -> feed(ctx.getSource(), ctx.getSource().getPlayer()))
+                .then(CommandManager.argument("target", EntityArgumentType.player())
+                        .executes(ctx -> feed(ctx.getSource(), EntityArgumentType.getPlayer(ctx, "target"))));
+
+        dispatcher.register(root);
+    }
+
+    private int feed(ServerCommandSource source, ServerPlayerEntity target) {
+        if (target == null) {
+            source.sendError(Text.literal("You must be a player to use this command without a target."));
+            return 0;
+        }
+
+        target.getHungerManager().setFoodLevel(20);
+        target.getHungerManager().setSaturationLevel(20.0F);
+
+        if (source.getEntity() == target) {
+            source.sendFeedback(() -> Text.literal("Fed you to full hunger and saturation."), false);
+        } else {
+            source.sendFeedback(() -> Text.literal("Fed " + target.getName().getString() + " to full hunger and saturation."), true);
+            target.sendMessage(Text.literal("You were fed by " + source.getName() + "."));
         }
 
         return 1;
