@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "essentials",
+  "version": "${version}",
+  "name": "Essentials",
+  "description": "Essential tools for Minecraft SMP Servers.",
+  "authors": ["F1nal04"],
+  "license": "MIT",
+  "icon": "assets/essentials/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": ["f1nal.essentials.Essentials"]
+  },
+  "mixins": [],
+  "depends": {
+    "fabricloader": ">=0.17.2",
+    "minecraft": "~1.21.8",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
+}
