@@ -1,8 +1,11 @@
 package f1nal.essentials;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.mojang.brigadier.tree.LiteralCommandNode;
+
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.minecraft.command.CommandRegistryAccess;
@@ -14,10 +17,9 @@ import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class Essentials implements ModInitializer {
+
     public static final String MOD_ID = "essentials";
 
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
@@ -32,6 +34,7 @@ public class Essentials implements ModInitializer {
         CommandRegistrationCallback.EVENT.register(this::registerRepairCommand);
         CommandRegistrationCallback.EVENT.register(this::registerHealCommand);
         CommandRegistrationCallback.EVENT.register(this::registerFeedCommand);
+        CommandRegistrationCallback.EVENT.register(this::registerFlightCommand);
         CommandRegistrationCallback.EVENT.register(this::registerDisposalCommand);
     }
 
@@ -130,6 +133,47 @@ public class Essentials implements ModInitializer {
         } else {
             source.sendFeedback(() -> Text.literal("Fed " + target.getName().getString() + " to full hunger and saturation."), true);
             target.sendMessage(Text.literal("You were fed by " + source.getName() + "."));
+        }
+
+        return 1;
+    }
+
+    private void registerFlightCommand(CommandDispatcher<ServerCommandSource> dispatcher, CommandRegistryAccess registryAccess, CommandManager.RegistrationEnvironment environment) {
+        LiteralArgumentBuilder<ServerCommandSource> root = CommandManager.literal("flight")
+                .requires(source -> source.hasPermissionLevel(2))
+                .executes(ctx -> toggleFlight(ctx.getSource(), ctx.getSource().getPlayer()))
+                .then(CommandManager.argument("target", EntityArgumentType.player())
+                        .executes(ctx -> toggleFlight(ctx.getSource(), EntityArgumentType.getPlayer(ctx, "target"))));
+
+        dispatcher.register(root);
+    }
+
+    private int toggleFlight(ServerCommandSource source, ServerPlayerEntity target) {
+        if (target == null) {
+            source.sendError(Text.literal("You must be a player to use this command without a target."));
+            return 0;
+        }
+
+        if (target.isCreative() || target.isSpectator()) {
+            if (source.getEntity() == target) {
+                source.sendFeedback(() -> Text.literal("Your gamemode already allows flight."), false);
+            } else {
+                source.sendFeedback(() -> Text.literal(target.getName().getString() + " already has flight from their gamemode."), true);
+                target.sendMessage(Text.literal("Flight command had no effect because your gamemode already allows flight."));
+            }
+            return 1;
+        }
+
+        boolean enable = !target.getAbilities().allowFlying;
+        target.getAbilities().allowFlying = enable;
+        target.getAbilities().flying = enable;
+        target.sendAbilitiesUpdate();
+
+        if (source.getEntity() == target) {
+            source.sendFeedback(() -> Text.literal((enable ? "Enabled" : "Disabled") + " flight."), false);
+        } else {
+            source.sendFeedback(() -> Text.literal((enable ? "Enabled " : "Disabled ") + target.getName().getString() + "'s flight."), true);
+            target.sendMessage(Text.literal("Your flight was " + (enable ? "enabled" : "disabled") + " by " + source.getName() + "."));
         }
 
         return 1;
