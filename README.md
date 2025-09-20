@@ -1,36 +1,18 @@
-# Essentials (Fabric)
+# Essentials (Fabric) (WIP)
 
-A lightweight set of server-friendly utility commands for Minecraft. Provides quick actions like repair, heal, feed, and a disposable trash GUI. Works in singleplayer and on dedicated servers. Clients do not need the mod to join a modded server running this.
+Essentials is an SMP toolkit that, in my opinion, provides the essential admin and quality of life improvements for a survival server.
 
-## What it does
+## Commands & Features
 
-- /repair: Fully repairs the item in a player's main hand if it is damageable.
-- /heal: Restores a player's health to full and also fills hunger and saturation.
-- /feed: Fills a player's hunger and saturation to maximum.
-- /disposal, /trash, /trashcan: Opens a 27-slot temporary container to throw items away; items are not kept.
+- `/repair [target]` – Repairs the main-hand item if it is damageable. Permission level 2.
+- `/heal [target]` – Restores health, hunger, and saturation to full. Permission level 2.
+- `/feed [target]` – Tops off hunger and saturation. Permission level 2.
+- `/flight [target]` – Toggles creative-style flight for survival players. Permission level 2.
+- `/disposal`, `/trash`, `/trashcan` – Opens a temporary 9x3 inventory for throwing items away. Anyone can run it. The contents are deleted when the screen closes, and the player gets a reminder in chat.
 
-## Commands
+`[target]` is optional. Defaults to executor.
 
-- /repair [target]
-  - Permissions: Requires permission level 2 (operators by default).
-  - If no target is given, acts on the command executor.
-  - Only works on damageable items in the main hand.
-
-- /heal [target]
-  - Permissions: Requires permission level 2.
-  - Heals to max health and fills hunger + saturation.
-
-- /feed [target]
-  - Permissions: Requires permission level 2.
-  - Fills hunger and saturation to max.
-
-- /disposal (aliases: /trash, /trashcan)
-  - Permissions: None required by default; can be executed by any player.
-  - Opens a temporary 9x3 container for discarding items.
-
-Notes:
-- When targeting another player with /repair, /heal, or /feed, appropriate feedback messages are sent to both the executor and the target.
-- Command permission levels follow standard Minecraft server rules. Adjust via your permissions/ops setup as needed.
+All targeted commands send feedback to both the executor and the affected player, so nobody is surprised by a sudden heal or flight toggle.
 
 ## Installation (Fabric)
 
