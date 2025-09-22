@@ -50,18 +50,18 @@ public class Essentials implements ModInitializer {
 
     private int repair(ServerCommandSource source, ServerPlayerEntity target) {
         if (target == null) {
-            source.sendError(Text.literal("You must be a player to use this command without a target."));
+            source.sendError(Messages.error("You must be a player to use this command."));
             return 0;
         }
 
         ItemStack stack = target.getMainHandStack();
         if (stack.isEmpty()) {
-            source.sendError(Text.literal(target.getName().getString() + " has an empty main hand."));
+            source.sendError(Messages.error(target.getName().getString() + " has an empty main hand."));
             return 0;
         }
 
         if (!stack.isDamageable()) {
-            source.sendFeedback(() -> Text.literal("The item in main hand is not damageable: " + stack.getName().getString()), false);
+            source.sendFeedback(() -> Messages.warning("The item in main hand is not damageable: " + stack.getName().getString()), false);
             return 1;
         }
 
@@ -69,10 +69,10 @@ public class Essentials implements ModInitializer {
         stack.setDamage(0);
 
         if (source.getEntity() == target) {
-            source.sendFeedback(() -> Text.literal("Repaired your main-hand item: " + stack.getName().getString()), false);
+            source.sendFeedback(() -> Messages.info("Repaired main-hand item: " + stack.getName().getString()), false);
         } else {
-            source.sendFeedback(() -> Text.literal("Repaired " + target.getName().getString() + "'s main-hand item: " + stack.getName().getString()), true);
-            target.sendMessage(Text.literal("Your main-hand item was repaired by " + source.getName() + "."));
+            source.sendFeedback(() -> Messages.info("Repaired " + target.getName().getString() + "'s main-hand item: " + stack.getName().getString()), true);
+            target.sendMessage(Messages.info("Main-hand item was repaired by " + source.getName() + "."));
         }
 
         return 1;
@@ -90,7 +90,7 @@ public class Essentials implements ModInitializer {
 
     private int heal(ServerCommandSource source, ServerPlayerEntity target) {
         if (target == null) {
-            source.sendError(Text.literal("You must be a player to use this command without a target."));
+            source.sendError(Messages.error("You must be a player to use this command."));
             return 0;
         }
 
@@ -100,10 +100,10 @@ public class Essentials implements ModInitializer {
         target.getHungerManager().setSaturationLevel(20.0F);
 
         if (source.getEntity() == target) {
-            source.sendFeedback(() -> Text.literal("Healed you to full health (" + maxHealth + ")"), false);
+            source.sendFeedback(() -> Messages.info("Healed to full health (" + maxHealth + ")"), false);
         } else {
-            source.sendFeedback(() -> Text.literal("Healed " + target.getName().getString() + " to full health (" + maxHealth + ")"), true);
-            target.sendMessage(Text.literal("You were healed by " + source.getName() + "."));
+            source.sendFeedback(() -> Messages.info("Healed " + target.getName().getString() + " to full health (" + maxHealth + ")"), true);
+            target.sendMessage(Messages.info("Healed to full health by " + source.getName() + "."));
         }
 
         return 1;
@@ -121,7 +121,7 @@ public class Essentials implements ModInitializer {
 
     private int feed(ServerCommandSource source, ServerPlayerEntity target) {
         if (target == null) {
-            source.sendError(Text.literal("You must be a player to use this command without a target."));
+            source.sendError(Messages.error("You must be a player to use this command."));
             return 0;
         }
 
@@ -129,10 +129,10 @@ public class Essentials implements ModInitializer {
         target.getHungerManager().setSaturationLevel(20.0F);
 
         if (source.getEntity() == target) {
-            source.sendFeedback(() -> Text.literal("Fed you to full hunger and saturation."), false);
+            source.sendFeedback(() -> Messages.info("Fed to full hunger and saturation."), false);
         } else {
-            source.sendFeedback(() -> Text.literal("Fed " + target.getName().getString() + " to full hunger and saturation."), true);
-            target.sendMessage(Text.literal("You were fed by " + source.getName() + "."));
+            source.sendFeedback(() -> Messages.info("Fed " + target.getName().getString() + " to full hunger and saturation."), true);
+            target.sendMessage(Messages.info("Fed to full hunger and saturation by " + source.getName() + "."));
         }
 
         return 1;
@@ -150,16 +150,16 @@ public class Essentials implements ModInitializer {
 
     private int toggleFlight(ServerCommandSource source, ServerPlayerEntity target) {
         if (target == null) {
-            source.sendError(Text.literal("You must be a player to use this command without a target."));
+            source.sendError(Messages.error("You must be a player to use this command."));
             return 0;
         }
 
         if (target.isCreative() || target.isSpectator()) {
             if (source.getEntity() == target) {
-                source.sendFeedback(() -> Text.literal("Your gamemode already allows flight."), false);
+                source.sendFeedback(() -> Messages.info("Gamemode already allows flight."), false);
             } else {
-                source.sendFeedback(() -> Text.literal(target.getName().getString() + " already has flight from their gamemode."), true);
-                target.sendMessage(Text.literal("Flight command had no effect because your gamemode already allows flight."));
+                source.sendFeedback(() -> Messages.info(target.getName().getString() + "'s gamemode already allows flight."), true);
+                // target.sendMessage(Messages.warning("Flight command had no effect because gamemode already allows flight."), false);
             }
             return 1;
         }
@@ -170,10 +170,12 @@ public class Essentials implements ModInitializer {
         target.sendAbilitiesUpdate();
 
         if (source.getEntity() == target) {
-            source.sendFeedback(() -> Text.literal((enable ? "Enabled" : "Disabled") + " flight."), false);
+            source.sendFeedback(() -> (enable ? Messages.success("Flight enabled.") : Messages.info("Flight disabled.")), false);
         } else {
-            source.sendFeedback(() -> Text.literal((enable ? "Enabled " : "Disabled ") + target.getName().getString() + "'s flight."), true);
-            target.sendMessage(Text.literal("Your flight was " + (enable ? "enabled" : "disabled") + " by " + source.getName() + "."));
+            source.sendFeedback(() -> (enable
+                    ? Messages.success("Enabled " + target.getName().getString() + "'s flight.")
+                    : Messages.warning("Disabled " + target.getName().getString() + "'s flight.")), true);
+            target.sendMessage(Messages.info("Your flight was " + (enable ? "enabled" : "disabled") + " by " + source.getName() + "."));
         }
 
         return 1;
@@ -194,7 +196,7 @@ public class Essentials implements ModInitializer {
 
     private int openDisposal(ServerCommandSource source, ServerPlayerEntity target) {
         if (target == null) {
-            source.sendError(Text.literal("You must be a player to use this command."));
+            source.sendError(Messages.error("You must be a player to use this command."));
             return 0;
         }
 
@@ -204,7 +206,7 @@ public class Essentials implements ModInitializer {
         ));
 
         if (source.getEntity() == target) {
-            source.sendFeedback(() -> Text.literal("Opened disposal."), false);
+            source.sendFeedback(() -> Messages.info("Opened disposal."), false);
         }
 
         return 1;
