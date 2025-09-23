@@ -13,9 +13,15 @@ public final class Messages {
     }
 
     public static MutableText prefix() {
+        if (TAG.bold) {
+            return Text.literal("[")
+                    .formatted(TAG.bracketColor)
+                    .append(Text.literal(TAG.text).formatted(TAG.color, Formatting.BOLD))
+                    .append(Text.literal("] ").formatted(TAG.bracketColor));
+        }
         return Text.literal("[")
                 .formatted(TAG.bracketColor)
-                .append(Text.literal(TAG.text).formatted(TAG.color, TAG.bold ? Formatting.BOLD : Formatting.RESET))
+                .append(Text.literal(TAG.text).formatted(TAG.color))
                 .append(Text.literal("] ").formatted(TAG.bracketColor));
     }
 
