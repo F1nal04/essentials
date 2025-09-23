@@ -13,21 +13,21 @@ import net.minecraft.util.Formatting;
 import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.Yaml;
 
-public final class TagSettings {
+public final class TagConfig {
 
     public final String text;
     public final Formatting color;
     public final Formatting bracketColor;
     public final boolean bold;
 
-    private TagSettings(String text, Formatting color, Formatting bracketColor, boolean bold) {
+    private TagConfig(String text, Formatting color, Formatting bracketColor, boolean bold) {
         this.text = text;
         this.color = color;
         this.bracketColor = bracketColor;
         this.bold = bold;
     }
 
-    public static TagSettings loadOrDefaults() {
+    public static TagConfig loadOrDefaults() {
         Path cfg = FabricLoader.getInstance().getConfigDir().resolve("essentials.yaml");
         if (!Files.exists(cfg)) {
             return defaults();
@@ -58,14 +58,14 @@ public final class TagSettings {
                 return defaults();
             }
 
-            return new TagSettings(text, color, bracketColor, boldObj);
+            return new TagConfig(text, color, bracketColor, boldObj);
         } catch (IOException e) {
             return defaults();
         }
     }
 
-    private static TagSettings defaults() {
-        return new TagSettings("Essentials", Formatting.AQUA, Formatting.DARK_GRAY, true);
+    private static TagConfig defaults() {
+        return new TagConfig("Essentials", Formatting.AQUA, Formatting.DARK_GRAY, true);
     }
 
     private static String coerceString(Object value, String def) {

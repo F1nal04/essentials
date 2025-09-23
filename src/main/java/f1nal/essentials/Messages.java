@@ -1,13 +1,13 @@
 package f1nal.essentials;
 
-import f1nal.essentials.config.TagSettings;
+import f1nal.essentials.config.TagConfig;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 
 public final class Messages {
 
-    private static final TagSettings TAG = TagSettings.loadOrDefaults();
+    private static final TagConfig TAG = TagConfig.loadOrDefaults();
 
     private Messages() {
     }

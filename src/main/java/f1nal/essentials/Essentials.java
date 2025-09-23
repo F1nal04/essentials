@@ -17,6 +17,9 @@ import f1nal.essentials.command.FeedCommand;
 import f1nal.essentials.command.FlightCommand;
 import f1nal.essentials.command.HealCommand;
 import f1nal.essentials.command.RepairCommand;
+import f1nal.essentials.config.CommandConfig;
+import f1nal.essentials.config.CommandConfig.CommandSettings;
+import java.util.Map;
 
 public class Essentials implements ModInitializer {
 
@@ -32,11 +35,23 @@ public class Essentials implements ModInitializer {
     }
 
     private void registerCommands() {
-        CommandRegistrationCallback.EVENT.register(RepairCommand::register);
-        CommandRegistrationCallback.EVENT.register(HealCommand::register);
-        CommandRegistrationCallback.EVENT.register(FeedCommand::register);
-        CommandRegistrationCallback.EVENT.register(FlightCommand::register);
-        CommandRegistrationCallback.EVENT.register(DisposalCommand::register);
+        Map<String, CommandSettings> commandSettings = CommandConfig.loadCommandSettings();
+
+        if (commandSettings.get("repair").enabled()) {
+            CommandRegistrationCallback.EVENT.register(RepairCommand::register);
+        }
+        if (commandSettings.get("heal").enabled()) {
+            CommandRegistrationCallback.EVENT.register(HealCommand::register);
+        }
+        if (commandSettings.get("feed").enabled()) {
+            CommandRegistrationCallback.EVENT.register(FeedCommand::register);
+        }
+        if (commandSettings.get("flight").enabled()) {
+            CommandRegistrationCallback.EVENT.register(FlightCommand::register);
+        }
+        if (commandSettings.get("disposal").enabled()) {
+            CommandRegistrationCallback.EVENT.register(DisposalCommand::register);
+        }
     }
 
     private void copyDefaultConfigIfMissing() {
