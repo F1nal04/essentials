@@ -1,0 +1,25 @@
+tag:
+  # Shown in chat messages, e.g. [Essentials]
+  text: "Essentials"
+  # Color names follow Minecraft's Formatting enum (case-insensitive), e.g. AQUA, DARK_GRAY, YELLOW
+  color: "AQUA"
+  bracketColor: "DARK_GRAY"
+  bold: true
+
+commands:
+  # Access: op | all
+  repair:
+    enabled: true
+    access: "op"
+  heal:
+    enabled: true
+    access: "op"
+  feed:
+    enabled: true
+    access: "op"
+  flight:
+    enabled: true
+    access: "op"
+  disposal:
+    enabled: true
+    access: "all"
