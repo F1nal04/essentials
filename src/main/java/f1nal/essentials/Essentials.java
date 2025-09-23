@@ -37,20 +37,39 @@ public class Essentials implements ModInitializer {
     private void registerCommands() {
         Map<String, CommandSettings> commandSettings = CommandConfig.loadCommandSettings();
 
-        if (commandSettings.get("repair").enabled()) {
-            CommandRegistrationCallback.EVENT.register(RepairCommand::register);
+        CommandSettings repairSettings = commandSettings.get("repair");
+        if (repairSettings.enabled()) {
+            CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
+                RepairCommand.register(dispatcher, registryAccess, environment, repairSettings)
+            );
         }
-        if (commandSettings.get("heal").enabled()) {
-            CommandRegistrationCallback.EVENT.register(HealCommand::register);
+
+        CommandSettings healSettings = commandSettings.get("heal");
+        if (healSettings.enabled()) {
+            CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
+                HealCommand.register(dispatcher, registryAccess, environment, healSettings)
+            );
         }
-        if (commandSettings.get("feed").enabled()) {
-            CommandRegistrationCallback.EVENT.register(FeedCommand::register);
+
+        CommandSettings feedSettings = commandSettings.get("feed");
+        if (feedSettings.enabled()) {
+            CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
+                FeedCommand.register(dispatcher, registryAccess, environment, feedSettings)
+            );
         }
-        if (commandSettings.get("flight").enabled()) {
-            CommandRegistrationCallback.EVENT.register(FlightCommand::register);
+
+        CommandSettings flightSettings = commandSettings.get("flight");
+        if (flightSettings.enabled()) {
+            CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
+                FlightCommand.register(dispatcher, registryAccess, environment, flightSettings)
+            );
         }
-        if (commandSettings.get("disposal").enabled()) {
-            CommandRegistrationCallback.EVENT.register(DisposalCommand::register);
+
+        CommandSettings disposalSettings = commandSettings.get("disposal");
+        if (disposalSettings.enabled()) {
+            CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
+                DisposalCommand.register(dispatcher, registryAccess, environment, disposalSettings)
+            );
         }
     }
 

@@ -4,6 +4,7 @@ import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 
 import f1nal.essentials.Messages;
+import f1nal.essentials.config.CommandConfig;
 import net.minecraft.command.CommandRegistryAccess;
 import net.minecraft.command.argument.EntityArgumentType;
 import net.minecraft.server.command.CommandManager;
@@ -15,9 +16,9 @@ public final class FeedCommand {
     private FeedCommand() {
     }
 
-    public static void register(CommandDispatcher<ServerCommandSource> dispatcher, CommandRegistryAccess registryAccess, CommandManager.RegistrationEnvironment environment) {
+    public static void register(CommandDispatcher<ServerCommandSource> dispatcher, CommandRegistryAccess registryAccess, CommandManager.RegistrationEnvironment environment, CommandConfig.CommandSettings settings) {
         LiteralArgumentBuilder<ServerCommandSource> root = CommandManager.literal("feed")
-                .requires(source -> source.hasPermissionLevel(2))
+                .requires(settings.getPermissionRequirement())
                 .executes(ctx -> feed(ctx.getSource(), ctx.getSource().getPlayer()))
                 .then(CommandManager.argument("target", EntityArgumentType.player())
                         .executes(ctx -> feed(ctx.getSource(), EntityArgumentType.getPlayer(ctx, "target"))));

@@ -60,5 +60,13 @@ public final class CommandConfig {
     }
 
     public record CommandSettings(boolean enabled, String access) {
+
+        public java.util.function.Predicate<net.minecraft.server.command.ServerCommandSource> getPermissionRequirement() {
+            return switch (access.toLowerCase()) {
+                case "op" -> source -> source.hasPermissionLevel(2);
+                case "all" -> source -> true; // Allow everyone
+                default -> source -> source.hasPermissionLevel(2); // Default to op
+            };
+        }
     }
 }

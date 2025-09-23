@@ -13,18 +13,22 @@ import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
 import f1nal.essentials.Messages;
+import f1nal.essentials.config.CommandConfig;
 
 public final class DisposalCommand {
 
     private DisposalCommand() {
     }
 
-    public static void register(CommandDispatcher<ServerCommandSource> dispatcher, CommandRegistryAccess registryAccess, CommandManager.RegistrationEnvironment environment) {
+    public static void register(CommandDispatcher<ServerCommandSource> dispatcher, CommandRegistryAccess registryAccess, CommandManager.RegistrationEnvironment environment, CommandConfig.CommandSettings settings) {
         LiteralArgumentBuilder<ServerCommandSource> disposal = CommandManager.literal("disposal")
+                .requires(settings.getPermissionRequirement())
                 .executes(ctx -> openDisposal(ctx.getSource(), ctx.getSource().getPlayer()));
         LiteralArgumentBuilder<ServerCommandSource> trash = CommandManager.literal("trash")
+                .requires(settings.getPermissionRequirement())
                 .executes(ctx -> openDisposal(ctx.getSource(), ctx.getSource().getPlayer()));
         LiteralArgumentBuilder<ServerCommandSource> trashcan = CommandManager.literal("trashcan")
+                .requires(settings.getPermissionRequirement())
                 .executes(ctx -> openDisposal(ctx.getSource(), ctx.getSource().getPlayer()));
 
         dispatcher.register(disposal);
