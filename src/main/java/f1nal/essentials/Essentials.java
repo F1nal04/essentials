@@ -3,20 +3,14 @@ package f1nal.essentials;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.mojang.brigadier.CommandDispatcher;
-import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
-import net.minecraft.command.CommandRegistryAccess;
-import net.minecraft.command.argument.EntityArgumentType;
-import net.minecraft.item.ItemStack;
-import net.minecraft.screen.GenericContainerScreenHandler;
-import net.minecraft.screen.SimpleNamedScreenHandlerFactory;
-import net.minecraft.server.command.CommandManager;
-import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.Text;
+
+import f1nal.essentials.command.DisposalCommand;
+import f1nal.essentials.command.FeedCommand;
+import f1nal.essentials.command.FlightCommand;
+import f1nal.essentials.command.HealCommand;
+import f1nal.essentials.command.RepairCommand;
 
 public class Essentials implements ModInitializer {
 
@@ -31,184 +25,10 @@ public class Essentials implements ModInitializer {
     }
 
     private void registerCommands() {
-        CommandRegistrationCallback.EVENT.register(this::registerRepairCommand);
-        CommandRegistrationCallback.EVENT.register(this::registerHealCommand);
-        CommandRegistrationCallback.EVENT.register(this::registerFeedCommand);
-        CommandRegistrationCallback.EVENT.register(this::registerFlightCommand);
-        CommandRegistrationCallback.EVENT.register(this::registerDisposalCommand);
-    }
-
-    private void registerRepairCommand(CommandDispatcher<ServerCommandSource> dispatcher, CommandRegistryAccess registryAccess, CommandManager.RegistrationEnvironment environment) {
-        LiteralArgumentBuilder<ServerCommandSource> root = CommandManager.literal("repair")
-                .requires(source -> source.hasPermissionLevel(2))
-                .executes(ctx -> repair(ctx.getSource(), ctx.getSource().getPlayer()))
-                .then(CommandManager.argument("target", EntityArgumentType.player())
-                        .executes(ctx -> repair(ctx.getSource(), EntityArgumentType.getPlayer(ctx, "target"))));
-
-        dispatcher.register(root);
-    }
-
-    private int repair(ServerCommandSource source, ServerPlayerEntity target) {
-        if (target == null) {
-            source.sendError(Messages.error("You must be a player to use this command."));
-            return 0;
-        }
-
-        ItemStack stack = target.getMainHandStack();
-        if (stack.isEmpty()) {
-            source.sendError(Messages.error(target.getName().getString() + " has an empty main hand."));
-            return 0;
-        }
-
-        if (!stack.isDamageable()) {
-            source.sendFeedback(() -> Messages.warning("The item in main hand is not damageable: " + stack.getName().getString()), false);
-            return 1;
-        }
-
-        // Set damage to 0 to fully repair
-        stack.setDamage(0);
-
-        if (source.getEntity() == target) {
-            source.sendFeedback(() -> Messages.info("Repaired main-hand item: " + stack.getName().getString()), false);
-        } else {
-            source.sendFeedback(() -> Messages.info("Repaired " + target.getName().getString() + "'s main-hand item: " + stack.getName().getString()), true);
-            target.sendMessage(Messages.info("Main-hand item was repaired by " + source.getName() + "."));
-        }
-
-        return 1;
-    }
-
-    private void registerHealCommand(CommandDispatcher<ServerCommandSource> dispatcher, CommandRegistryAccess registryAccess, CommandManager.RegistrationEnvironment environment) {
-        LiteralArgumentBuilder<ServerCommandSource> root = CommandManager.literal("heal")
-                .requires(source -> source.hasPermissionLevel(2))
-                .executes(ctx -> heal(ctx.getSource(), ctx.getSource().getPlayer()))
-                .then(CommandManager.argument("target", EntityArgumentType.player())
-                        .executes(ctx -> heal(ctx.getSource(), EntityArgumentType.getPlayer(ctx, "target"))));
-
-        dispatcher.register(root);
-    }
-
-    private int heal(ServerCommandSource source, ServerPlayerEntity target) {
-        if (target == null) {
-            source.sendError(Messages.error("You must be a player to use this command."));
-            return 0;
-        }
-
-        float maxHealth = target.getMaxHealth();
-        target.setHealth(maxHealth);
-        target.getHungerManager().setFoodLevel(20);
-        target.getHungerManager().setSaturationLevel(20.0F);
-
-        if (source.getEntity() == target) {
-            source.sendFeedback(() -> Messages.info("Healed to full health (" + maxHealth + ")"), false);
-        } else {
-            source.sendFeedback(() -> Messages.info("Healed " + target.getName().getString() + " to full health (" + maxHealth + ")"), true);
-            target.sendMessage(Messages.info("Healed to full health by " + source.getName() + "."));
-        }
-
-        return 1;
-    }
-
-    private void registerFeedCommand(CommandDispatcher<ServerCommandSource> dispatcher, CommandRegistryAccess registryAccess, CommandManager.RegistrationEnvironment environment) {
-        LiteralArgumentBuilder<ServerCommandSource> root = CommandManager.literal("feed")
-                .requires(source -> source.hasPermissionLevel(2))
-                .executes(ctx -> feed(ctx.getSource(), ctx.getSource().getPlayer()))
-                .then(CommandManager.argument("target", EntityArgumentType.player())
-                        .executes(ctx -> feed(ctx.getSource(), EntityArgumentType.getPlayer(ctx, "target"))));
-
-        dispatcher.register(root);
-    }
-
-    private int feed(ServerCommandSource source, ServerPlayerEntity target) {
-        if (target == null) {
-            source.sendError(Messages.error("You must be a player to use this command."));
-            return 0;
-        }
-
-        target.getHungerManager().setFoodLevel(20);
-        target.getHungerManager().setSaturationLevel(20.0F);
-
-        if (source.getEntity() == target) {
-            source.sendFeedback(() -> Messages.info("Fed to full hunger and saturation."), false);
-        } else {
-            source.sendFeedback(() -> Messages.info("Fed " + target.getName().getString() + " to full hunger and saturation."), true);
-            target.sendMessage(Messages.info("Fed to full hunger and saturation by " + source.getName() + "."));
-        }
-
-        return 1;
-    }
-
-    private void registerFlightCommand(CommandDispatcher<ServerCommandSource> dispatcher, CommandRegistryAccess registryAccess, CommandManager.RegistrationEnvironment environment) {
-        LiteralArgumentBuilder<ServerCommandSource> root = CommandManager.literal("flight")
-                .requires(source -> source.hasPermissionLevel(2))
-                .executes(ctx -> toggleFlight(ctx.getSource(), ctx.getSource().getPlayer()))
-                .then(CommandManager.argument("target", EntityArgumentType.player())
-                        .executes(ctx -> toggleFlight(ctx.getSource(), EntityArgumentType.getPlayer(ctx, "target"))));
-
-        dispatcher.register(root);
-    }
-
-    private int toggleFlight(ServerCommandSource source, ServerPlayerEntity target) {
-        if (target == null) {
-            source.sendError(Messages.error("You must be a player to use this command."));
-            return 0;
-        }
-
-        if (target.isCreative() || target.isSpectator()) {
-            if (source.getEntity() == target) {
-                source.sendFeedback(() -> Messages.info("Gamemode already allows flight."), false);
-            } else {
-                source.sendFeedback(() -> Messages.info(target.getName().getString() + "'s gamemode already allows flight."), true);
-                // target.sendMessage(Messages.warning("Flight command had no effect because gamemode already allows flight."), false);
-            }
-            return 1;
-        }
-
-        boolean enable = !target.getAbilities().allowFlying;
-        target.getAbilities().allowFlying = enable;
-        target.getAbilities().flying = enable;
-        target.sendAbilitiesUpdate();
-
-        if (source.getEntity() == target) {
-            source.sendFeedback(() -> (enable ? Messages.success("Flight enabled.") : Messages.info("Flight disabled.")), false);
-        } else {
-            source.sendFeedback(() -> (enable
-                    ? Messages.success("Enabled " + target.getName().getString() + "'s flight.")
-                    : Messages.warning("Disabled " + target.getName().getString() + "'s flight.")), true);
-            target.sendMessage(Messages.info("Your flight was " + (enable ? "enabled" : "disabled") + " by " + source.getName() + "."));
-        }
-
-        return 1;
-    }
-
-    private void registerDisposalCommand(CommandDispatcher<ServerCommandSource> dispatcher, CommandRegistryAccess registryAccess, CommandManager.RegistrationEnvironment environment) {
-        LiteralArgumentBuilder<ServerCommandSource> disposal = CommandManager.literal("disposal")
-                .executes(ctx -> openDisposal(ctx.getSource(), ctx.getSource().getPlayer()));
-        LiteralArgumentBuilder<ServerCommandSource> trash = CommandManager.literal("trash")
-                .executes(ctx -> openDisposal(ctx.getSource(), ctx.getSource().getPlayer()));
-        LiteralArgumentBuilder<ServerCommandSource> trashcan = CommandManager.literal("trashcan")
-                .executes(ctx -> openDisposal(ctx.getSource(), ctx.getSource().getPlayer()));
-
-        dispatcher.register(disposal);
-        dispatcher.register(trash);
-        dispatcher.register(trashcan);
-    }
-
-    private int openDisposal(ServerCommandSource source, ServerPlayerEntity target) {
-        if (target == null) {
-            source.sendError(Messages.error("You must be a player to use this command."));
-            return 0;
-        }
-
-        target.openHandledScreen(new SimpleNamedScreenHandlerFactory(
-                (syncId, playerInventory, player) -> GenericContainerScreenHandler.createGeneric9x3(syncId, playerInventory, new DisposalInventory()),
-                Text.literal("Disposal")
-        ));
-
-        if (source.getEntity() == target) {
-            source.sendFeedback(() -> Messages.info("Opened disposal."), false);
-        }
-
-        return 1;
+        CommandRegistrationCallback.EVENT.register(RepairCommand::register);
+        CommandRegistrationCallback.EVENT.register(HealCommand::register);
+        CommandRegistrationCallback.EVENT.register(FeedCommand::register);
+        CommandRegistrationCallback.EVENT.register(FlightCommand::register);
+        CommandRegistrationCallback.EVENT.register(DisposalCommand::register);
     }
 }
