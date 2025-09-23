@@ -1,21 +1,22 @@
 package f1nal.essentials;
 
+import f1nal.essentials.config.TagSettings;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 
 public final class Messages {
 
-    private static final String TAG = "Essentials";
+    private static final TagSettings TAG = TagSettings.loadOrDefaults();
 
     private Messages() {
     }
 
     public static MutableText prefix() {
         return Text.literal("[")
-                .formatted(Formatting.DARK_GRAY)
-                .append(Text.literal(TAG).formatted(Formatting.AQUA, Formatting.BOLD))
-                .append(Text.literal("] ").formatted(Formatting.DARK_GRAY));
+                .formatted(TAG.bracketColor)
+                .append(Text.literal(TAG.text).formatted(TAG.color, TAG.bold ? Formatting.BOLD : Formatting.RESET))
+                .append(Text.literal("] ").formatted(TAG.bracketColor));
     }
 
     public static Text info(String message) {
