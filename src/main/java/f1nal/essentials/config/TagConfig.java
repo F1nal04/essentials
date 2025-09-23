@@ -65,7 +65,7 @@ public final class TagConfig {
     }
 
     private static TagConfig defaults() {
-        return new TagConfig("Essentials", Formatting.AQUA, Formatting.DARK_GRAY, true);
+        return new TagConfig("Essentials", Formatting.DARK_PURPLE, Formatting.DARK_GRAY, true);
     }
 
     private static String coerceString(Object value, String def) {

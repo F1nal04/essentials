@@ -2,7 +2,7 @@ tag:
   # Shown in chat messages, e.g. [Essentials]
   text: "Essentials"
   # Color names follow Minecraft's Formatting enum (case-insensitive), e.g. AQUA, DARK_GRAY, YELLOW
-  color: "AQUA"
+  color: "DARK_PURPLE"
   bracketColor: "DARK_GRAY"
   bold: true
 
