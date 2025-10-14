@@ -11,6 +11,13 @@ Essentials is an SMP toolkit that, in my opinion, provides the essential admin a
 - `/feed [target]` – Tops off hunger and saturation. Op-level permission by default.
 - `/flight [target]` – Toggles creative-style flight for survival players. Op-level permission by default.
 - `/disposal`, `/trash`, `/trashcan` – Opens a temporary 9x3 inventory for throwing items away. Available to all players by default. The contents are deleted when the screen closes, and the player gets a reminder in chat.
+- `/tpa <player>` – Send a teleport request to another player. Available to all players by default.
+- `/tpahere <player>` – Send a request for another player to teleport to you. Available to all players by default.
+- `/tpahere` – Send TPAHere requests to all online players. Available to all players by default.
+- `/tpaccept <player>` – Accept a teleport request. Available to all players by default.
+- `/tpdeny <player>` – Deny a teleport request. Available to all players by default.
+- `/tpacancel` – Cancel your outgoing teleport request. Available to all players by default.
+- `/back` – Teleport back to your previous position (works after TPA teleports). Available to all players by default.
 
 `[target]` is optional. Defaults to executor.
 
@@ -20,6 +27,8 @@ Essentials is an SMP toolkit that, in my opinion, provides the essential admin a
 - **Customizable Chat Tags**: All messages include a configurable tag with custom text, colors, and styling
 - **Smart Feedback**: All targeted commands send feedback to both the executor and the affected player, so nobody is surprised by a sudden heal or flight toggle
 - **Configuration System**: YAML-based configuration system allows server administrators to customize command availability and access levels
+- **TPA System**: Full teleport request system with configurable timeouts, cooldowns, and smart request management
+- **Back Command**: Return to your previous position after TPA teleports with a configurable time window
 
 ## Installation (Fabric)
 
@@ -38,6 +47,16 @@ Essentials is an SMP toolkit that, in my opinion, provides the essential admin a
 ## Configuration
 
 Essentials uses a YAML configuration file located at `.minecraft/config/essentials.yaml` (or in your server's config directory). If no configuration file exists, default settings will be used.
+
+### TPA Configuration
+
+The TPA system includes the following configurable options:
+
+- `timeout_seconds` (default: 60) - How long teleport requests last before expiring
+- `cooldown_seconds` (default: 10) - How long to wait after cancelling a request before sending another
+- `window_seconds` for back command (default: 120) - Time window during which `/back` can be used after a TPA teleport
+
+All TPA commands can be enabled/disabled and have their access level configured (op/all) in the `commands` section.
 
 ## Build from source
 
