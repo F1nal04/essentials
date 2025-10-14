@@ -1,13 +1,19 @@
 package f1nal.essentials.command;
 
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
+
 import f1nal.essentials.Messages;
 import f1nal.essentials.config.CommandConfig;
 import f1nal.essentials.tpa.TpaManager;
 import net.minecraft.command.CommandRegistryAccess;
 import net.minecraft.command.argument.EntityArgumentType;
+import net.minecraft.network.packet.s2c.play.PositionFlag;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
@@ -17,9 +23,6 @@ import net.minecraft.text.HoverEvent;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
-
-import java.util.List;
-import java.util.Optional;
 
 public final class TpaCommands {
 
@@ -132,11 +135,15 @@ public final class TpaCommands {
             return 0;
         }
         MinecraftServer server = sender.getServer();
-        if (server == null) return 0;
+        if (server == null) {
+            return 0;
+        }
         List<ServerPlayerEntity> players = server.getPlayerManager().getPlayerList();
         int count = 0;
         for (ServerPlayerEntity p : players) {
-            if (p == sender) continue;
+            if (p == sender) {
+                continue;
+            }
             if (TpaManager.createRequest(sender, p, TpaManager.Type.TPA_HERE)) {
                 sendButtonsToTarget(p, sender, true);
                 count++;
@@ -165,7 +172,9 @@ public final class TpaCommands {
         }
         TpaManager.Request req = reqOpt.get();
         MinecraftServer server = target.getServer();
-        if (server == null) return 0;
+        if (server == null) {
+            return 0;
+        }
         ServerPlayerEntity sender = server.getPlayerManager().getPlayer(req.sender);
         if (sender == null) {
             source.sendError(Messages.error("The requester is no longer online."));
@@ -175,10 +184,14 @@ public final class TpaCommands {
         // Perform teleport
         if (req.type == TpaManager.Type.TPA) {
             // sender -> target
-            sender.requestTeleport(target.getX(), target.getY(), target.getZ());
+            sender.teleport(target.getWorld(), target.getX(), target.getY(), target.getZ(),
+                    Set.of(),
+                    target.getYaw(), target.getPitch(), false);
         } else {
             // target -> sender
-            target.requestTeleport(sender.getX(), sender.getY(), sender.getZ());
+            target.teleport(sender.getWorld(), sender.getX(), sender.getY(), sender.getZ(),
+                    Set.of(),
+                    sender.getYaw(), sender.getPitch(), false);
         }
 
         sender.sendMessage(Messages.success("Teleport request accepted by " + target.getName().getString() + "."));
@@ -241,17 +254,17 @@ public final class TpaCommands {
         MutableText acceptBtn = Text.literal("[Accept]")
                 .formatted(Formatting.GREEN)
                 .styled(s -> s
-                        .withBold(true)
-                        .withClickEvent(new ClickEvent.RunCommand("/tpaccept " + senderName))
-                        .withHoverEvent(new HoverEvent.ShowText(Text.literal("Click to accept " + senderName + "'s request").formatted(Formatting.GRAY))))
+                .withBold(true)
+                .withClickEvent(new ClickEvent.RunCommand("/tpaccept " + senderName))
+                .withHoverEvent(new HoverEvent.ShowText(Text.literal("Click to accept " + senderName + "'s request").formatted(Formatting.GRAY))))
                 .append(Text.literal(" "));
 
         MutableText denyBtn = Text.literal("[Decline]")
                 .formatted(Formatting.RED)
                 .styled(s -> s
-                        .withBold(true)
-                        .withClickEvent(new ClickEvent.RunCommand("/tpdeny " + senderName))
-                        .withHoverEvent(new HoverEvent.ShowText(Text.literal("Click to decline " + senderName + "'s request").formatted(Formatting.GRAY))));
+                .withBold(true)
+                .withClickEvent(new ClickEvent.RunCommand("/tpdeny " + senderName))
+                .withHoverEvent(new HoverEvent.ShowText(Text.literal("Click to decline " + senderName + "'s request").formatted(Formatting.GRAY))));
 
         MutableText hint = Text.literal("  Use /tpaccept " + senderName + " or /tpdeny " + senderName)
                 .formatted(Formatting.DARK_GRAY);
