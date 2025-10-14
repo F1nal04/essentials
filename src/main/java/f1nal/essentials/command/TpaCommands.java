@@ -13,7 +13,6 @@ import f1nal.essentials.config.CommandConfig;
 import f1nal.essentials.tpa.TpaManager;
 import net.minecraft.command.CommandRegistryAccess;
 import net.minecraft.command.argument.EntityArgumentType;
-import net.minecraft.network.packet.s2c.play.PositionFlag;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
@@ -181,7 +180,6 @@ public final class TpaCommands {
             return 0;
         }
 
-        // Perform teleport
         if (req.type == TpaManager.Type.TPA) {
             // sender -> target
             sender.teleport(target.getWorld(), target.getX(), target.getY(), target.getZ(),
@@ -237,12 +235,7 @@ public final class TpaCommands {
         }
         int cd = f1nal.essentials.config.TpaConfig.get().cooldownSeconds;
         source.sendFeedback(() -> Messages.info("Teleport request cancelled. You must wait " + cd + "s before sending another."), false);
-        // Notify target if online
-        MinecraftServer server = sender.getServer();
-        if (server != null) {
-            // There's at most one outgoing, but we no longer have access to the req here
-            // so we can't precisely notify. This is acceptable minimalism.
-        }
+        
         return 1;
     }
 

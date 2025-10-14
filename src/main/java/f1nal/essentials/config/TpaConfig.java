@@ -11,9 +11,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 
-/**
- * Configuration for TPA feature (timeout and cancel cooldown).
- */
 public final class TpaConfig {
 
     private static final int DEFAULT_TIMEOUT_SECONDS = 60; // 60s timeout
@@ -53,7 +50,7 @@ public final class TpaConfig {
             }
             int timeout = coerceInt(tpa.get("timeout_seconds"), DEFAULT_TIMEOUT_SECONDS);
             int cooldown = coerceInt(tpa.get("cooldown_seconds"), DEFAULT_COOLDOWN_SECONDS);
-            // Prevent nonsensical values
+
             if (timeout < 1) timeout = DEFAULT_TIMEOUT_SECONDS;
             if (cooldown < 0) cooldown = DEFAULT_COOLDOWN_SECONDS;
             return new TpaConfig(timeout, cooldown);

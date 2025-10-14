@@ -12,8 +12,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class TpaManager {
 
     public enum Type {
-        TPA,        // sender wants to go to target
-        TPA_HERE    // target should come to sender
+        TPA,
+        TPA_HERE
     }
 
     public static final class Request {
@@ -72,7 +72,6 @@ public final class TpaManager {
         UUID s = sender.getUuid();
         UUID t = target.getUuid();
 
-        // Enforce one pending outgoing per sender
         if (outgoingBySender.containsKey(s)) {
             return false;
         }
@@ -94,7 +93,6 @@ public final class TpaManager {
         List<Request> list = incomingByTarget.getOrDefault(target.getUuid(), Collections.emptyList());
         if (list.isEmpty()) return Optional.empty();
         if (from == null) {
-            // return the newest non-expired
             long now = System.currentTimeMillis();
             return list.stream().filter(r -> !r.isExpired(now)).max(Comparator.comparingLong(r -> r.createdAtMillis));
         }
@@ -154,7 +152,6 @@ public final class TpaManager {
             e.getValue().removeIf(r -> r.isExpired(now));
             if (e.getValue().isEmpty()) it2.remove();
         }
-        // Cooldowns cleanup
         cancelCooldownUntil.entrySet().removeIf(en -> en.getValue() <= now);
     }
 }
