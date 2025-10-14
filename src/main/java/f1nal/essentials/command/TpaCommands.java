@@ -11,6 +11,7 @@ import com.mojang.brigadier.context.CommandContext;
 import f1nal.essentials.Messages;
 import f1nal.essentials.config.CommandConfig;
 import f1nal.essentials.tpa.TpaManager;
+import f1nal.essentials.back.BackManager;
 import net.minecraft.command.CommandRegistryAccess;
 import net.minecraft.command.argument.EntityArgumentType;
 import net.minecraft.server.MinecraftServer;
@@ -182,11 +183,13 @@ public final class TpaCommands {
 
         if (req.type == TpaManager.Type.TPA) {
             // sender -> target
+            BackManager.markBackPosition(sender); // record sender's previous position
             sender.teleport(target.getWorld(), target.getX(), target.getY(), target.getZ(),
                     Set.of(),
                     target.getYaw(), target.getPitch(), false);
         } else {
             // target -> sender
+            BackManager.markBackPosition(target); // record target's previous position
             target.teleport(sender.getWorld(), sender.getX(), sender.getY(), sender.getZ(),
                     Set.of(),
                     sender.getYaw(), sender.getPitch(), false);
@@ -235,7 +238,7 @@ public final class TpaCommands {
         }
         int cd = f1nal.essentials.config.TpaConfig.get().cooldownSeconds;
         source.sendFeedback(() -> Messages.info("Teleport request cancelled. You must wait " + cd + "s before sending another."), false);
-        
+
         return 1;
     }
 

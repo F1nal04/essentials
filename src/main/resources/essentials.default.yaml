@@ -6,6 +6,10 @@ tag:
   bracketColor: "DARK_GRAY"
   bold: true
 
+back:
+  # Time window during which /back can be used after a TPA teleport
+  window_seconds: 120
+
 tpa:
   # Timeout for a TPA/TPAHere request
   timeout_seconds: 60
@@ -30,5 +34,8 @@ commands:
     enabled: true
     access: "all"
   tpa:
+    enabled: true
+    access: "all"
+  back:
     enabled: true
     access: "all"
