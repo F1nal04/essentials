@@ -248,8 +248,9 @@ public final class TpaCommands {
     private static void sendButtonsToTarget(ServerPlayerEntity target, ServerPlayerEntity sender, boolean here) {
         String senderName = sender.getName().getString();
         String typeText = here ? "wants you to teleport to them" : "wants to teleport to you";
-        MutableText header = Text.literal(senderName).formatted(Formatting.WHITE)
-                .append(" " + typeText + ". ").formatted(Formatting.GRAY);
+        MutableText header = Text.empty()
+                .append(Text.literal(senderName).formatted(Formatting.WHITE))
+                .append(Text.literal(" " + typeText + ". ").formatted(Formatting.GRAY));
 
         MutableText acceptBtn = Text.literal("[Accept]")
                 .formatted(Formatting.GREEN)
@@ -266,9 +267,9 @@ public final class TpaCommands {
                 .withClickEvent(new ClickEvent.RunCommand("/tpdeny " + senderName))
                 .withHoverEvent(new HoverEvent.ShowText(Text.literal("Click to decline " + senderName + "'s request").formatted(Formatting.GRAY))));
 
-        MutableText hint = Text.literal("  Use /tpaccept " + senderName + " or /tpdeny " + senderName)
+        MutableText hint = Text.literal("Use /tpaccept " + senderName + " or /tpdeny " + senderName)
                 .formatted(Formatting.DARK_GRAY);
 
-        target.sendMessage(Messages.custom(header.append(acceptBtn).append(denyBtn).append(hint)));
+        target.sendMessage(Messages.custom(header.append(Text.literal("\n")).append(acceptBtn).append(denyBtn).append(Text.literal("\n")).append(hint)));
     }
 }
