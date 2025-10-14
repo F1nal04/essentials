@@ -1,8 +1,8 @@
 package f1nal.essentials.tpa;
 
+import f1nal.essentials.config.TpaConfig;
 import net.minecraft.server.network.ServerPlayerEntity;
 
-import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -36,9 +36,6 @@ public final class TpaManager {
         }
     }
 
-    private static final long REQUEST_TTL_MILLIS = 60_000L; // 1 minute
-    private static final long CANCEL_COOLDOWN_MILLIS = 10_000L; // 10 seconds
-
     // One outgoing request per sender at a time
     private static final Map<UUID, Request> outgoingBySender = new ConcurrentHashMap<>();
     // Incoming requests per target (may be multiple senders)
@@ -47,6 +44,16 @@ public final class TpaManager {
     private static final Map<UUID, Long> cancelCooldownUntil = new ConcurrentHashMap<>();
 
     private TpaManager() {}
+
+    private static long requestTtlMillis() {
+        return Math.max(1, TpaConfig.get().timeoutSeconds) * 1000L;
+    }
+
+    private static long cancelCooldownMillis() {
+        int s = TpaConfig.get().cooldownSeconds;
+        if (s < 0) s = 0;
+        return s * 1000L;
+    }
 
     public static Optional<Long> getSecondsLeftOnCancelCooldown(ServerPlayerEntity sender) {
         long now = System.currentTimeMillis();
@@ -76,7 +83,7 @@ public final class TpaManager {
             return false;
         }
 
-        Request req = new Request(s, t, type, now, now + REQUEST_TTL_MILLIS);
+        Request req = new Request(s, t, type, now, now + requestTtlMillis());
         outgoingBySender.put(s, req);
         incomingByTarget.computeIfAbsent(t, k -> new ArrayList<>()).add(req);
         return true;
@@ -117,7 +124,7 @@ public final class TpaManager {
             list.removeIf(r -> r.sender.equals(s));
             if (list.isEmpty()) incomingByTarget.remove(req.target);
         }
-        cancelCooldownUntil.put(s, System.currentTimeMillis() + CANCEL_COOLDOWN_MILLIS);
+        cancelCooldownUntil.put(s, System.currentTimeMillis() + cancelCooldownMillis());
         return true;
     }
 

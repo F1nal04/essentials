@@ -235,7 +235,8 @@ public final class TpaCommands {
             source.sendError(Messages.error("You have no pending request to cancel."));
             return 0;
         }
-        source.sendFeedback(() -> Messages.info("Teleport request cancelled. You must wait 10s before sending another."), false);
+        int cd = f1nal.essentials.config.TpaConfig.get().cooldownSeconds;
+        source.sendFeedback(() -> Messages.info("Teleport request cancelled. You must wait " + cd + "s before sending another."), false);
         // Notify target if online
         MinecraftServer server = sender.getServer();
         if (server != null) {

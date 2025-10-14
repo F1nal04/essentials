@@ -6,6 +6,12 @@ tag:
   bracketColor: "DARK_GRAY"
   bold: true
 
+tpa:
+  # Timeout for a TPA/TPAHere request
+  timeout_seconds: 60
+  # Cooldown after cancelling a request before you can send another
+  cooldown_seconds: 10
+
 commands:
   # Access: op | all
   repair:
