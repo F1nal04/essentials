@@ -12,10 +12,10 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Text;
 import net.minecraft.text.ClickEvent;
 import net.minecraft.text.HoverEvent;
+import net.minecraft.text.MutableText;
+import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 
 import java.util.List;
@@ -23,7 +23,8 @@ import java.util.Optional;
 
 public final class TpaCommands {
 
-    private TpaCommands() {}
+    private TpaCommands() {
+    }
 
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher, CommandRegistryAccess registryAccess, CommandManager.RegistrationEnvironment environment, CommandConfig.CommandSettings settings) {
         LiteralArgumentBuilder<ServerCommandSource> tpa = CommandManager.literal("tpa")
@@ -234,8 +235,8 @@ public final class TpaCommands {
     private static void sendButtonsToTarget(ServerPlayerEntity target, ServerPlayerEntity sender, boolean here) {
         String senderName = sender.getName().getString();
         String typeText = here ? "wants you to teleport to them" : "wants to teleport to you";
-        MutableText header = Text.literal(senderName + " " + typeText + ". ")
-                .formatted(Formatting.GRAY);
+        MutableText header = Text.literal(senderName).formatted(Formatting.WHITE)
+                .append(" " + typeText + ". ").formatted(Formatting.GRAY);
 
         MutableText acceptBtn = Text.literal("[Accept]")
                 .formatted(Formatting.GREEN)
@@ -250,7 +251,7 @@ public final class TpaCommands {
                 .styled(s -> s
                         .withBold(true)
                         .withClickEvent(new ClickEvent.RunCommand("/tpdeny " + senderName))
-                        .withHoverEvent(new HoverEvent.ShowText(Text.literal("Click to decline " + senderName + "'s request").formatted(Formatting.GRAY)))) ;
+                        .withHoverEvent(new HoverEvent.ShowText(Text.literal("Click to decline " + senderName + "'s request").formatted(Formatting.GRAY))));
 
         MutableText hint = Text.literal("  Use /tpaccept " + senderName + " or /tpdeny " + senderName)
                 .formatted(Formatting.DARK_GRAY);
