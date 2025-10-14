@@ -17,6 +17,7 @@ import f1nal.essentials.command.FeedCommand;
 import f1nal.essentials.command.FlightCommand;
 import f1nal.essentials.command.HealCommand;
 import f1nal.essentials.command.RepairCommand;
+import f1nal.essentials.command.TpaCommands;
 import f1nal.essentials.config.CommandConfig;
 import f1nal.essentials.config.CommandConfig.CommandSettings;
 import java.util.Map;
@@ -69,6 +70,13 @@ public class Essentials implements ModInitializer {
         if (disposalSettings.enabled()) {
             CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
                 DisposalCommand.register(dispatcher, registryAccess, environment, disposalSettings)
+            );
+        }
+
+        CommandSettings tpaSettings = commandSettings.get("tpa");
+        if (tpaSettings != null && tpaSettings.enabled()) {
+            CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
+                TpaCommands.register(dispatcher, registryAccess, environment, tpaSettings)
             );
         }
     }

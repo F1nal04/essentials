@@ -56,6 +56,7 @@ public final class CommandConfig {
         defaults.put("feed", new CommandSettings(true, "op"));
         defaults.put("flight", new CommandSettings(true, "op"));
         defaults.put("disposal", new CommandSettings(true, "all"));
+        defaults.put("tpa", new CommandSettings(true, "all"));
         return defaults;
     }
 
