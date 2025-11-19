@@ -49,7 +49,7 @@ public final class BackManager {
     public static void markBackPosition(ServerPlayerEntity player) {
         long now = System.currentTimeMillis();
         BackEntry entry = new BackEntry(
-                player.getWorld().getRegistryKey(),
+                player.getEntityWorld().getRegistryKey(),
                 player.getX(), player.getY(), player.getZ(),
                 player.getYaw(), player.getPitch(),
                 now + windowMillis()
@@ -90,7 +90,7 @@ public final class BackManager {
         Optional<BackEntry> opt = consume(player);
         if (opt.isEmpty()) return false;
         BackEntry e = opt.get();
-        MinecraftServer server = player.getServer();
+        MinecraftServer server = player.getEntityWorld().getServer();
         if (server == null) return false;
         ServerWorld world = server.getWorld(e.worldKey);
         if (world == null) return false;

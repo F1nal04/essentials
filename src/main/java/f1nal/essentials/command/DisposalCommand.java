@@ -43,33 +43,35 @@ public final class DisposalCommand {
         }
 
         target.openHandledScreen(new SimpleNamedScreenHandlerFactory(
-                (syncId, playerInventory, player) -> GenericContainerScreenHandler.createGeneric9x3(syncId, playerInventory, new SimpleInventory(27) {
-                    private int getTotalItemCount() {
-                        int total = 0;
-                        for (int i = 0; i < size(); i++) {
-                            ItemStack stack = getStack(i);
-                            if (!stack.isEmpty()) {
-                                total += stack.getCount();
+                (syncId, playerInventory, player) -> {
+                    SimpleInventory inv = new SimpleInventory(27);
+                    return new GenericContainerScreenHandler(net.minecraft.screen.ScreenHandlerType.GENERIC_9X3, syncId, playerInventory, inv, 3) {
+                        private int getTotalItemCount() {
+                            int total = 0;
+                            for (int i = 0; i < inv.size(); i++) {
+                                ItemStack stack = inv.getStack(i);
+                                if (!stack.isEmpty()) {
+                                    total += stack.getCount();
+                                }
                             }
+                            return total;
                         }
-                        return total;
-                    }
-
-                    @Override
-                    public void onClose(PlayerEntity playerEntity) {
-                        if (!playerEntity.getWorld().isClient) {
-                            int deletedCount = getTotalItemCount();
-                            clear();
-                            if (playerEntity instanceof ServerPlayerEntity serverPlayer) {
-                                serverPlayer.sendMessage(
-                                        Messages.info("Disposal closed. Deleted " + deletedCount + " item" + (deletedCount == 1 ? "" : "s") + "."),
-                                        false
-                                );
+                        @Override
+                        public void onClosed(PlayerEntity playerEntity) {
+                            if (!playerEntity.getEntityWorld().isClient()) {
+                                int deletedCount = getTotalItemCount();
+                                inv.clear();
+                                if (playerEntity instanceof ServerPlayerEntity serverPlayer) {
+                                    serverPlayer.sendMessage(
+                                            Messages.info("Disposal closed. Deleted " + deletedCount + " item" + (deletedCount == 1 ? "" : "s") + "."),
+                                            false
+                                    );
+                                }
                             }
+                            super.onClosed(playerEntity);
                         }
-                        super.onClose(playerEntity);
-                    }
-                }),
+                    };
+                },
                 Text.literal("Disposal")
         ));
 

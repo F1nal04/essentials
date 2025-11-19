@@ -134,7 +134,7 @@ public final class TpaCommands {
             source.sendError(Messages.error("You must wait " + cd.get() + "s before sending another request."));
             return 0;
         }
-        MinecraftServer server = sender.getServer();
+        MinecraftServer server = sender.getEntityWorld().getServer();
         if (server == null) {
             return 0;
         }
@@ -171,7 +171,7 @@ public final class TpaCommands {
             return 0;
         }
         TpaManager.Request req = reqOpt.get();
-        MinecraftServer server = target.getServer();
+        MinecraftServer server = target.getEntityWorld().getServer();
         if (server == null) {
             return 0;
         }
@@ -184,13 +184,13 @@ public final class TpaCommands {
         if (req.type == TpaManager.Type.TPA) {
             // sender -> target
             BackManager.markBackPosition(sender); // record sender's previous position
-            sender.teleport(target.getWorld(), target.getX(), target.getY(), target.getZ(),
+            sender.teleport(target.getEntityWorld(), target.getX(), target.getY(), target.getZ(),
                     Set.of(),
                     target.getYaw(), target.getPitch(), false);
         } else {
             // target -> sender
             BackManager.markBackPosition(target); // record target's previous position
-            target.teleport(sender.getWorld(), sender.getX(), sender.getY(), sender.getZ(),
+            target.teleport(sender.getEntityWorld(), sender.getX(), sender.getY(), sender.getZ(),
                     Set.of(),
                     sender.getYaw(), sender.getPitch(), false);
         }
@@ -213,7 +213,7 @@ public final class TpaCommands {
             return 0;
         }
         TpaManager.Request req = reqOpt.get();
-        MinecraftServer server = target.getServer();
+        MinecraftServer server = target.getEntityWorld().getServer();
         if (server != null) {
             ServerPlayerEntity sender = server.getPlayerManager().getPlayer(req.sender);
             if (sender != null) {
