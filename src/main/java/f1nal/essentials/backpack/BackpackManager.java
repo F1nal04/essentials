@@ -1,0 +1,215 @@
+package f1nal.essentials.backpack;
+
+import f1nal.essentials.Essentials;
+import f1nal.essentials.config.BackpackConfig;
+import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.inventory.Inventories;
+import net.minecraft.inventory.Inventory;
+import net.minecraft.inventory.SimpleInventory;
+import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.NbtIo;
+import net.minecraft.nbt.NbtSizeTracker;
+import net.minecraft.nbt.NbtElement;
+import net.minecraft.nbt.NbtList;
+import net.minecraft.registry.RegistryWrapper;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.util.collection.DefaultedList;
+import net.minecraft.nbt.NbtOps;
+import net.minecraft.registry.RegistryOps;
+import com.mojang.serialization.DataResult;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * Manages backpack inventories with persistent storage. Supports both
+ * per-player and serverwide modes.
+ */
+public final class BackpackManager {
+
+    private static final Map<UUID, SimpleInventory> playerBackpacks = new ConcurrentHashMap<>();
+    private static SimpleInventory serverwideBackpack = null;
+    private static Path dataDir;
+
+    private BackpackManager() {
+    }
+
+    public static void initialize(MinecraftServer server) {
+        dataDir = FabricLoader.getInstance().getGameDir().resolve("essentials_data").resolve("backpacks");
+        try {
+            Files.createDirectories(dataDir);
+        } catch (IOException e) {
+            Essentials.LOGGER.error("Failed to create backpacks data directory", e);
+        }
+
+        // Load serverwide backpack if in serverwide mode
+        if (!BackpackConfig.get().perPlayer) {
+            serverwideBackpack = loadServerwideBackpack(server);
+        }
+    }
+
+    /**
+     * Gets or creates a backpack inventory for the given player. In serverwide
+     * mode, returns the shared backpack.
+     */
+    public static SimpleInventory getOrCreateBackpack(UUID playerId, MinecraftServer server) {
+        if (!BackpackConfig.get().perPlayer) {
+            // Serverwide mode - everyone shares the same backpack
+            if (serverwideBackpack == null) {
+                serverwideBackpack = loadServerwideBackpack(server);
+            }
+            return serverwideBackpack;
+        }
+
+        // Per-player mode
+        return playerBackpacks.computeIfAbsent(playerId, id -> loadPlayerBackpack(id, server));
+    }
+
+    /**
+     * Saves a player's backpack to disk. In serverwide mode, saves the shared
+     * backpack.
+     */
+    public static void saveBackpack(UUID playerId, Inventory inventory, MinecraftServer server) {
+        if (!BackpackConfig.get().perPlayer) {
+            // Save serverwide backpack
+            saveServerwideBackpack(inventory, server);
+        } else {
+            // Save per-player backpack
+            savePlayerBackpack(playerId, inventory, server);
+        }
+    }
+
+    /**
+     * Saves all backpacks to disk (called on server shutdown).
+     */
+    public static void saveAll(MinecraftServer server) {
+        if (!BackpackConfig.get().perPlayer) {
+            if (serverwideBackpack != null) {
+                saveServerwideBackpack(serverwideBackpack, server);
+            }
+        } else {
+            for (Map.Entry<UUID, SimpleInventory> entry : playerBackpacks.entrySet()) {
+                savePlayerBackpack(entry.getKey(), entry.getValue(), server);
+            }
+        }
+    }
+
+    /**
+     * Unloads a player's backpack from memory (but keeps it saved on disk).
+     */
+    public static void unloadPlayer(UUID playerId) {
+        if (BackpackConfig.get().perPlayer) {
+            playerBackpacks.remove(playerId);
+        }
+    }
+
+    private static SimpleInventory loadPlayerBackpack(UUID playerId, MinecraftServer server) {
+        SimpleInventory inventory = new SimpleInventory(27);
+        Path file = dataDir.resolve(playerId.toString() + ".nbt");
+
+        if (!Files.exists(file)) {
+            return inventory;
+        }
+
+        try (FileInputStream fis = new FileInputStream(file.toFile())) {
+            NbtCompound nbt = NbtIo.readCompressed(fis, NbtSizeTracker.ofUnlimitedBytes());
+            loadInventoryFromNbt(inventory, nbt, server);
+        } catch (IOException e) {
+            Essentials.LOGGER.error("Failed to load backpack for player {}", playerId, e);
+        }
+
+        return inventory;
+    }
+
+    private static SimpleInventory loadServerwideBackpack(MinecraftServer server) {
+        SimpleInventory inventory = new SimpleInventory(27);
+        Path file = dataDir.resolve("serverwide.nbt");
+
+        if (!Files.exists(file)) {
+            return inventory;
+        }
+
+        try (FileInputStream fis = new FileInputStream(file.toFile())) {
+            NbtCompound nbt = NbtIo.readCompressed(fis, NbtSizeTracker.ofUnlimitedBytes());
+            loadInventoryFromNbt(inventory, nbt, server);
+        } catch (IOException e) {
+            Essentials.LOGGER.error("Failed to load serverwide backpack", e);
+        }
+
+        return inventory;
+    }
+
+    private static void savePlayerBackpack(UUID playerId, Inventory inventory, MinecraftServer server) {
+        Path file = dataDir.resolve(playerId.toString() + ".nbt");
+        NbtCompound nbt = saveInventoryToNbt(inventory, server);
+
+        try (FileOutputStream fos = new FileOutputStream(file.toFile())) {
+            NbtIo.writeCompressed(nbt, fos);
+        } catch (IOException e) {
+            Essentials.LOGGER.error("Failed to save backpack for player {}", playerId, e);
+        }
+    }
+
+    private static void saveServerwideBackpack(Inventory inventory, MinecraftServer server) {
+        Path file = dataDir.resolve("serverwide.nbt");
+        NbtCompound nbt = saveInventoryToNbt(inventory, server);
+
+        try (FileOutputStream fos = new FileOutputStream(file.toFile())) {
+            NbtIo.writeCompressed(nbt, fos);
+        } catch (IOException e) {
+            Essentials.LOGGER.error("Failed to save serverwide backpack", e);
+        }
+    }
+
+    private static void loadInventoryFromNbt(SimpleInventory inventory, NbtCompound nbt, MinecraftServer server) {
+        RegistryWrapper.WrapperLookup registries = server.getRegistryManager();
+        RegistryOps<NbtElement> ops = RegistryOps.of(NbtOps.INSTANCE, registries);
+        NbtList list = nbt.getList("Items").orElseGet(NbtList::new);
+
+        // Initialize with empty stacks
+        for (int i = 0; i < inventory.size(); i++) {
+            inventory.setStack(i, ItemStack.EMPTY);
+        }
+
+        for (int i = 0; i < list.size(); i++) {
+            var maybeTag = list.getCompound(i);
+            if (maybeTag.isEmpty()) continue;
+            NbtCompound stackTag = maybeTag.get();
+            int slot = (stackTag.getByte("Slot").orElse((byte) -1)) & 255;
+            if (slot >= 0 && slot < inventory.size()) {
+                DataResult<ItemStack> parsed = ItemStack.CODEC.parse(ops, stackTag);
+                ItemStack stack = parsed.result().orElse(ItemStack.EMPTY);
+                inventory.setStack(slot, stack);
+            }
+        }
+    }
+
+    private static NbtCompound saveInventoryToNbt(Inventory inventory, MinecraftServer server) {
+        NbtCompound nbt = new NbtCompound();
+        RegistryWrapper.WrapperLookup registries = server.getRegistryManager();
+        RegistryOps<NbtElement> ops = RegistryOps.of(NbtOps.INSTANCE, registries);
+
+        NbtList list = new NbtList();
+        for (int i = 0; i < inventory.size(); i++) {
+            ItemStack stack = inventory.getStack(i);
+            if (!stack.isEmpty()) {
+                DataResult<NbtElement> encoded = ItemStack.CODEC.encodeStart(ops, stack);
+                NbtElement el = encoded.result().orElseGet(NbtCompound::new);
+                if (el instanceof NbtCompound stackTag) {
+                    stackTag.putByte("Slot", (byte) i);
+                    list.add(stackTag);
+                }
+            }
+        }
+
+        nbt.put("Items", list);
+        return nbt;
+    }
+}

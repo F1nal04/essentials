@@ -1,27 +1,29 @@
 package f1nal.essentials;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Map;
 
-import net.fabricmc.api.ModInitializer;
-import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
-import net.fabricmc.loader.api.FabricLoader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import f1nal.essentials.backpack.BackpackManager;
+import f1nal.essentials.command.BackCommand;
+import f1nal.essentials.command.BackpackCommand;
 import f1nal.essentials.command.DisposalCommand;
 import f1nal.essentials.command.FeedCommand;
 import f1nal.essentials.command.FlightCommand;
 import f1nal.essentials.command.HealCommand;
 import f1nal.essentials.command.RepairCommand;
 import f1nal.essentials.command.TpaCommands;
-import f1nal.essentials.command.BackCommand;
 import f1nal.essentials.config.CommandConfig;
 import f1nal.essentials.config.CommandConfig.CommandSettings;
-import java.util.Map;
+import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
+import net.fabricmc.loader.api.FabricLoader;
 
 public class Essentials implements ModInitializer {
 
@@ -33,6 +35,7 @@ public class Essentials implements ModInitializer {
     public void onInitialize() {
         copyDefaultConfigIfMissing();
         registerCommands();
+        registerLifecycleEvents();
         LOGGER.info("Essentials initialized");
     }
 
@@ -41,52 +44,71 @@ public class Essentials implements ModInitializer {
 
         CommandSettings repairSettings = commandSettings.get("repair");
         if (repairSettings.enabled()) {
-            CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
-                RepairCommand.register(dispatcher, registryAccess, environment, repairSettings)
+            CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment)
+                    -> RepairCommand.register(dispatcher, registryAccess, environment, repairSettings)
             );
         }
 
         CommandSettings healSettings = commandSettings.get("heal");
         if (healSettings.enabled()) {
-            CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
-                HealCommand.register(dispatcher, registryAccess, environment, healSettings)
+            CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment)
+                    -> HealCommand.register(dispatcher, registryAccess, environment, healSettings)
             );
         }
 
         CommandSettings feedSettings = commandSettings.get("feed");
         if (feedSettings.enabled()) {
-            CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
-                FeedCommand.register(dispatcher, registryAccess, environment, feedSettings)
+            CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment)
+                    -> FeedCommand.register(dispatcher, registryAccess, environment, feedSettings)
             );
         }
 
         CommandSettings flightSettings = commandSettings.get("flight");
         if (flightSettings.enabled()) {
-            CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
-                FlightCommand.register(dispatcher, registryAccess, environment, flightSettings)
+            CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment)
+                    -> FlightCommand.register(dispatcher, registryAccess, environment, flightSettings)
             );
         }
 
         CommandSettings disposalSettings = commandSettings.get("disposal");
         if (disposalSettings.enabled()) {
-            CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
-                DisposalCommand.register(dispatcher, registryAccess, environment, disposalSettings)
+            CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment)
+                    -> DisposalCommand.register(dispatcher, registryAccess, environment, disposalSettings)
             );
         }
 
         CommandSettings tpaSettings = commandSettings.get("tpa");
         if (tpaSettings != null && tpaSettings.enabled()) {
-            CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
-                TpaCommands.register(dispatcher, registryAccess, environment, tpaSettings)
+            CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment)
+                    -> TpaCommands.register(dispatcher, registryAccess, environment, tpaSettings)
             );
         }
 
         CommandSettings backSettings = commandSettings.get("back");
         if (backSettings != null && backSettings.enabled()) {
-            CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
-                BackCommand.register(dispatcher, registryAccess, environment, backSettings)
+            CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment)
+                    -> BackCommand.register(dispatcher, registryAccess, environment, backSettings)
             );
         }
+
+        CommandSettings backpackSettings = commandSettings.get("backpack");
+        if (backpackSettings != null && backpackSettings.enabled()) {
+            CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment)
+                    -> BackpackCommand.register(dispatcher, registryAccess, environment, backpackSettings)
+            );
+        }
+    }
+
+    private void registerLifecycleEvents() {
+        // Initialize backpack manager when server starts
+        ServerLifecycleEvents.SERVER_STARTED.register(server -> {
+            BackpackManager.initialize(server);
+        });
+
+        // Save all backpacks when server stops
+        ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
+            BackpackManager.saveAll(server);
+        });
     }
 
     private void copyDefaultConfigIfMissing() {

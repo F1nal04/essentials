@@ -8,9 +8,10 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 
-import net.fabricmc.loader.api.FabricLoader;
 import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.Yaml;
+
+import net.fabricmc.loader.api.FabricLoader;
 
 public final class CommandConfig {
 
@@ -58,6 +59,7 @@ public final class CommandConfig {
         defaults.put("disposal", new CommandSettings(true, "all"));
         defaults.put("tpa", new CommandSettings(true, "all"));
         defaults.put("back", new CommandSettings(true, "all"));
+        defaults.put("backpack", new CommandSettings(true, "all"));
         return defaults;
     }
 
@@ -65,9 +67,12 @@ public final class CommandConfig {
 
         public java.util.function.Predicate<net.minecraft.server.command.ServerCommandSource> getPermissionRequirement() {
             return switch (access.toLowerCase()) {
-                case "op" -> source -> source.hasPermissionLevel(2);
-                case "all" -> source -> true; // Allow everyone
-                default -> source -> source.hasPermissionLevel(2); // Default to op
+                case "op" ->
+                    source -> source.hasPermissionLevel(2);
+                case "all" ->
+                    source -> true; // Allow everyone
+                default ->
+                    source -> source.hasPermissionLevel(2); // Default to op
             };
         }
     }
