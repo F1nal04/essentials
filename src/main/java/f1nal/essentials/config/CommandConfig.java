@@ -12,6 +12,8 @@ import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.Yaml;
 
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
 
 public final class CommandConfig {
 
@@ -65,14 +67,14 @@ public final class CommandConfig {
 
     public record CommandSettings(boolean enabled, String access) {
 
-        public java.util.function.Predicate<net.minecraft.commands.CommandSourceStack> getPermissionRequirement() {
+        public java.util.function.Predicate<CommandSourceStack> getPermissionRequirement() {
             return switch (access.toLowerCase()) {
                 case "op" ->
-                    source -> source.hasPermission(2);
+                    Commands.hasPermission(Commands.LEVEL_GAMEMASTERS);
                 case "all" ->
                     source -> true; // Allow everyone
                 default ->
-                    source -> source.hasPermission(2); // Default to op
+                    Commands.hasPermission(Commands.LEVEL_GAMEMASTERS); // Default to op
             };
         }
     }

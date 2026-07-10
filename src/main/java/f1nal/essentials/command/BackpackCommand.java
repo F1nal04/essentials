@@ -67,7 +67,7 @@ public final class BackpackCommand {
                                         source.getServer()
                                 );
 
-                                serverPlayer.displayClientMessage(
+                                serverPlayer.sendSystemMessage(
                                         Messages.info("Backpack closed."),
                                         false
                                 );

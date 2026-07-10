@@ -62,7 +62,7 @@ public final class DisposalCommand {
                                 int deletedCount = getTotalItemCount();
                                 inv.clearContent();
                                 if (playerEntity instanceof ServerPlayer serverPlayer) {
-                                    serverPlayer.displayClientMessage(
+                                    serverPlayer.sendSystemMessage(
                                             Messages.info("Disposal closed. Deleted " + deletedCount + " item" + (deletedCount == 1 ? "" : "s") + "."),
                                             false
                                     );
