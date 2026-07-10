@@ -100,11 +100,19 @@ public final class BackpackManager {
     }
 
     /**
-     * Unloads a player's backpack from memory (but keeps it saved on disk).
+     * Saves a player's backpack to disk and unloads it from memory. Called on
+     * disconnect: vanilla does not close open menus when a player disconnects,
+     * so edits made while the backpack was open would otherwise only exist in
+     * the cached container and be lost by evicting it.
      */
-    public static void unloadPlayer(UUID playerId) {
+    public static void saveAndUnloadPlayer(UUID playerId, MinecraftServer server) {
         if (BackpackConfig.get().perPlayer) {
-            playerBackpacks.remove(playerId);
+            SimpleContainer inventory = playerBackpacks.remove(playerId);
+            if (inventory != null) {
+                savePlayerBackpack(playerId, inventory, server);
+            }
+        } else if (serverwideBackpack != null) {
+            saveServerwideBackpack(serverwideBackpack, server);
         }
     }
 
@@ -183,6 +191,10 @@ public final class BackpackManager {
             int slot = (stackTag.getByte("Slot").orElse((byte) -1)) & 255;
             if (slot >= 0 && slot < inventory.getContainerSize()) {
                 DataResult<ItemStack> parsed = ItemStack.CODEC.parse(ops, stackTag);
+                if (parsed.result().isEmpty()) {
+                    Essentials.LOGGER.warn("Failed to load backpack item in slot {}: {}",
+                            slot, parsed.error().map(e -> e.message()).orElse("unknown error"));
+                }
                 ItemStack stack = parsed.result().orElse(ItemStack.EMPTY);
                 inventory.setItem(slot, stack);
             }
@@ -199,8 +211,13 @@ public final class BackpackManager {
             ItemStack stack = inventory.getItem(i);
             if (!stack.isEmpty()) {
                 DataResult<Tag> encoded = ItemStack.CODEC.encodeStart(ops, stack);
-                Tag el = encoded.result().orElseGet(CompoundTag::new);
-                if (el instanceof CompoundTag stackTag) {
+                if (encoded.result().isEmpty()) {
+                    Essentials.LOGGER.warn("Failed to save backpack item in slot {} ({}): {}",
+                            i, stack.getHoverName().getString(),
+                            encoded.error().map(e -> e.message()).orElse("unknown error"));
+                    continue;
+                }
+                if (encoded.result().get() instanceof CompoundTag stackTag) {
                     stackTag.putByte("Slot", (byte) i);
                     list.add(stackTag);
                 }

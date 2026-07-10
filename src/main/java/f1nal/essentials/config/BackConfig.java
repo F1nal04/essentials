@@ -4,7 +4,6 @@ import net.fabricmc.loader.api.FabricLoader;
 import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.Yaml;
 
-import java.io.IOException;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -47,7 +46,8 @@ public final class BackConfig {
             int window = coerceInt(back.get("window_seconds"), DEFAULT_WINDOW_SECONDS);
             if (window < 1) window = DEFAULT_WINDOW_SECONDS;
             return new BackConfig(window);
-        } catch (IOException e) {
+        } catch (Exception e) {
+            f1nal.essentials.Essentials.LOGGER.warn("Failed to read back settings from essentials.yaml, using defaults: {}", e.toString());
             return defaults();
         }
     }

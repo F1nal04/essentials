@@ -23,6 +23,7 @@ import f1nal.essentials.config.CommandConfig.CommandSettings;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.loader.api.FabricLoader;
 
 public class Essentials implements ModInitializer {
@@ -108,6 +109,14 @@ public class Essentials implements ModInitializer {
         // Save all backpacks when server stops
         ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
             BackpackManager.saveAll(server);
+        });
+
+        // Save and drop a player's cached backpack when they disconnect.
+        // Saving here matters: vanilla does not close open menus on
+        // disconnect, so a backpack still open at that moment never gets
+        // its menu-close save.
+        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
+            BackpackManager.saveAndUnloadPlayer(handler.getPlayer().getUUID(), server);
         });
     }
 

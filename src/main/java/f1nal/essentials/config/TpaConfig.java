@@ -4,7 +4,6 @@ import net.fabricmc.loader.api.FabricLoader;
 import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.Yaml;
 
-import java.io.IOException;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -54,7 +53,8 @@ public final class TpaConfig {
             if (timeout < 1) timeout = DEFAULT_TIMEOUT_SECONDS;
             if (cooldown < 0) cooldown = DEFAULT_COOLDOWN_SECONDS;
             return new TpaConfig(timeout, cooldown);
-        } catch (IOException e) {
+        } catch (Exception e) {
+            f1nal.essentials.Essentials.LOGGER.warn("Failed to read tpa settings from essentials.yaml, using defaults: {}", e.toString());
             return defaults();
         }
     }

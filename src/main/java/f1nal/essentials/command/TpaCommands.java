@@ -138,20 +138,20 @@ public final class TpaCommands {
         if (server == null) {
             return 0;
         }
-        List<ServerPlayer> players = server.getPlayerList().getPlayers();
-        int count = 0;
-        for (ServerPlayer p : players) {
-            if (p == sender) {
-                continue;
-            }
-            if (TpaManager.createRequest(sender, p, TpaManager.Type.TPA_HERE)) {
-                sendButtonsToTarget(p, sender, true);
-                count++;
-            }
-        }
-        if (count == 0) {
-            source.sendFailure(Messages.error("Failed to create any requests (you may already have one pending)."));
+        List<ServerPlayer> others = server.getPlayerList().getPlayers().stream()
+                .filter(p -> p != sender)
+                .toList();
+        if (others.isEmpty()) {
+            source.sendFailure(Messages.error("No other players are online."));
             return 0;
+        }
+        int count = TpaManager.createRequests(sender, others, TpaManager.Type.TPA_HERE);
+        if (count < 0) {
+            source.sendFailure(Messages.error("You already have a pending request."));
+            return 0;
+        }
+        for (ServerPlayer p : others) {
+            sendButtonsToTarget(p, sender, true);
         }
         final int cnt = count;
         source.sendSuccess(() -> Messages.info("TPAHere request sent to " + cnt + " player(s)."), false);

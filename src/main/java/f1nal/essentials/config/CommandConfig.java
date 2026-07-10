@@ -1,6 +1,5 @@
 package f1nal.essentials.config;
 
-import java.io.IOException;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -11,6 +10,7 @@ import java.util.Map;
 import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.Yaml;
 
+import f1nal.essentials.Essentials;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -18,36 +18,37 @@ import net.minecraft.commands.Commands;
 public final class CommandConfig {
 
     public static Map<String, CommandSettings> loadCommandSettings() {
+        // Start from defaults so every known command always has settings,
+        // even when the user's config file is partial or malformed.
+        Map<String, CommandSettings> result = defaults();
         Path cfg = FabricLoader.getInstance().getConfigDir().resolve("essentials.yaml");
         if (!Files.exists(cfg)) {
-            return defaults();
+            return result;
         }
         try (Reader reader = Files.newBufferedReader(cfg, StandardCharsets.UTF_8)) {
             Yaml yaml = new Yaml(new LoaderOptions());
             Object root = yaml.load(reader);
             if (!(root instanceof Map<?, ?> map)) {
-                return defaults();
+                return result;
             }
             Object commandsObj = map.get("commands");
             if (!(commandsObj instanceof Map<?, ?> commands)) {
-                return defaults();
+                return result;
             }
 
-            Map<String, CommandSettings> result = new HashMap<>();
             for (Map.Entry<?, ?> entry : commands.entrySet()) {
                 String commandName = entry.getKey().toString();
                 Object configObj = entry.getValue();
                 if (configObj instanceof Map<?, ?> config) {
-                    Boolean enabled = config.get("enabled") instanceof Boolean ? (Boolean) config.get("enabled") : null;
-                    String access = config.get("access") instanceof String ? (String) config.get("access") : null;
-
-                    if (enabled != null && access != null) {
-                        result.put(commandName, new CommandSettings(enabled, access));
-                    }
+                    CommandSettings base = result.getOrDefault(commandName, new CommandSettings(true, "op"));
+                    boolean enabled = config.get("enabled") instanceof Boolean b ? b : base.enabled();
+                    String access = config.get("access") instanceof String s ? s : base.access();
+                    result.put(commandName, new CommandSettings(enabled, access));
                 }
             }
             return result;
-        } catch (IOException e) {
+        } catch (Exception e) {
+            Essentials.LOGGER.warn("Failed to read command settings from essentials.yaml, using defaults: {}", e.toString());
             return defaults();
         }
     }

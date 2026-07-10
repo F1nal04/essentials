@@ -7,6 +7,11 @@ import net.minecraft.server.level.ServerPlayer;
 
 /**
  * Manages TPA/TPAHere requests with expiry and cancel cooldowns.
+ *
+ * A sender may have one pending "batch" of outgoing requests at a time:
+ * a single request for /tpa and /tpahere, or one request per online player
+ * for /tpahere all. Targets accept or deny their own request independently;
+ * /tpcancel withdraws the whole batch.
  */
 public final class TpaManager {
 
@@ -35,8 +40,8 @@ public final class TpaManager {
         }
     }
 
-    // One outgoing request per sender at a time
-    private static final Map<UUID, Request> outgoingBySender = new ConcurrentHashMap<>();
+    // One outgoing batch per sender at a time (single request, or one per player for "tpahere all")
+    private static final Map<UUID, List<Request>> outgoingBySender = new ConcurrentHashMap<>();
     // Incoming requests per target (may be multiple senders)
     private static final Map<UUID, List<Request>> incomingByTarget = new ConcurrentHashMap<>();
     // Cancel cooldown per sender
@@ -69,7 +74,6 @@ public final class TpaManager {
     public static synchronized boolean createRequest(ServerPlayer sender, ServerPlayer target, Type type) {
         cleanupExpired();
         UUID s = sender.getUUID();
-        UUID t = target.getUUID();
 
         if (outgoingBySender.containsKey(s)) {
             return false;
@@ -81,10 +85,43 @@ public final class TpaManager {
             return false;
         }
 
-        Request req = new Request(s, t, type, now, now + requestTtlMillis());
-        outgoingBySender.put(s, req);
-        incomingByTarget.computeIfAbsent(t, k -> new ArrayList<>()).add(req);
+        addRequest(s, target.getUUID(), type, now);
         return true;
+    }
+
+    /**
+     * Creates one request per target as a single batch. Returns the number of
+     * requests created, or -1 if the sender already has a pending batch or is
+     * on cancel cooldown. Targets equal to the sender are skipped.
+     */
+    public static synchronized int createRequests(ServerPlayer sender, Collection<ServerPlayer> targets, Type type) {
+        cleanupExpired();
+        UUID s = sender.getUUID();
+
+        if (outgoingBySender.containsKey(s)) {
+            return -1;
+        }
+
+        long now = System.currentTimeMillis();
+        Long cooldown = cancelCooldownUntil.get(s);
+        if (cooldown != null && cooldown > now) {
+            return -1;
+        }
+
+        int count = 0;
+        for (ServerPlayer target : targets) {
+            UUID t = target.getUUID();
+            if (t.equals(s)) continue;
+            addRequest(s, t, type, now);
+            count++;
+        }
+        return count;
+    }
+
+    private static void addRequest(UUID sender, UUID target, Type type, long now) {
+        Request req = new Request(sender, target, type, now, now + requestTtlMillis());
+        outgoingBySender.computeIfAbsent(sender, k -> new ArrayList<>()).add(req);
+        incomingByTarget.computeIfAbsent(target, k -> new ArrayList<>()).add(req);
     }
 
     public static synchronized Optional<Request> findIncomingFor(ServerPlayer target, @org.jetbrains.annotations.Nullable ServerPlayer from) {
@@ -92,8 +129,7 @@ public final class TpaManager {
         List<Request> list = incomingByTarget.getOrDefault(target.getUUID(), Collections.emptyList());
         if (list.isEmpty()) return Optional.empty();
         if (from == null) {
-            long now = System.currentTimeMillis();
-            return list.stream().filter(r -> !r.isExpired(now)).max(Comparator.comparingLong(r -> r.createdAtMillis));
+            return list.stream().max(Comparator.comparingLong(r -> r.createdAtMillis));
         }
         UUID fromId = from.getUUID();
         return list.stream().filter(r -> r.sender.equals(fromId)).findFirst();
@@ -114,35 +150,40 @@ public final class TpaManager {
     public static synchronized boolean cancel(ServerPlayer sender) {
         cleanupExpired();
         UUID s = sender.getUUID();
-        Request req = outgoingBySender.remove(s);
-        if (req == null) return false;
-        List<Request> list = incomingByTarget.get(req.target);
-        if (list != null) {
-            list.removeIf(r -> r.sender.equals(s));
-            if (list.isEmpty()) incomingByTarget.remove(req.target);
+        List<Request> batch = outgoingBySender.remove(s);
+        if (batch == null || batch.isEmpty()) return false;
+        for (Request req : batch) {
+            List<Request> list = incomingByTarget.get(req.target);
+            if (list != null) {
+                list.remove(req);
+                if (list.isEmpty()) incomingByTarget.remove(req.target);
+            }
         }
         cancelCooldownUntil.put(s, System.currentTimeMillis() + cancelCooldownMillis());
         return true;
     }
 
     private static void remove(Request req) {
-        outgoingBySender.remove(req.sender);
-        List<Request> list = incomingByTarget.get(req.target);
-        if (list != null) {
-            list.removeIf(r -> r.sender.equals(req.sender));
-            if (list.isEmpty()) incomingByTarget.remove(req.target);
+        List<Request> outgoing = outgoingBySender.get(req.sender);
+        if (outgoing != null) {
+            outgoing.remove(req);
+            if (outgoing.isEmpty()) outgoingBySender.remove(req.sender);
+        }
+        List<Request> incoming = incomingByTarget.get(req.target);
+        if (incoming != null) {
+            incoming.remove(req);
+            if (incoming.isEmpty()) incomingByTarget.remove(req.target);
         }
     }
 
     public static synchronized void cleanupExpired() {
         long now = System.currentTimeMillis();
         // Outgoing
-        Iterator<Map.Entry<UUID, Request>> it = outgoingBySender.entrySet().iterator();
+        Iterator<Map.Entry<UUID, List<Request>>> it = outgoingBySender.entrySet().iterator();
         while (it.hasNext()) {
-            Map.Entry<UUID, Request> e = it.next();
-            if (e.getValue().isExpired(now)) {
-                it.remove();
-            }
+            Map.Entry<UUID, List<Request>> e = it.next();
+            e.getValue().removeIf(r -> r.isExpired(now));
+            if (e.getValue().isEmpty()) it.remove();
         }
         // Incoming
         Iterator<Map.Entry<UUID, List<Request>>> it2 = incomingByTarget.entrySet().iterator();

@@ -1,6 +1,5 @@
 package f1nal.essentials.config;
 
-import java.io.IOException;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -59,7 +58,8 @@ public final class TagConfig {
             }
 
             return new TagConfig(text, color, bracketColor, boldObj);
-        } catch (IOException e) {
+        } catch (Exception e) {
+            f1nal.essentials.Essentials.LOGGER.warn("Failed to read tag settings from essentials.yaml, using defaults: {}", e.toString());
             return defaults();
         }
     }
