@@ -9,18 +9,18 @@ import java.util.Locale;
 import java.util.Map;
 
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.util.Formatting;
+import net.minecraft.ChatFormatting;
 import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.Yaml;
 
 public final class TagConfig {
 
     public final String text;
-    public final Formatting color;
-    public final Formatting bracketColor;
+    public final ChatFormatting color;
+    public final ChatFormatting bracketColor;
     public final boolean bold;
 
-    private TagConfig(String text, Formatting color, Formatting bracketColor, boolean bold) {
+    private TagConfig(String text, ChatFormatting color, ChatFormatting bracketColor, boolean bold) {
         this.text = text;
         this.color = color;
         this.bracketColor = bracketColor;
@@ -51,8 +51,8 @@ public final class TagConfig {
                 return defaults();
             }
 
-            Formatting color = parseFormatting(colorStr, null);
-            Formatting bracketColor = parseFormatting(bracketColorStr, null);
+            ChatFormatting color = parseFormatting(colorStr, null);
+            ChatFormatting bracketColor = parseFormatting(bracketColorStr, null);
 
             if (color == null || bracketColor == null) {
                 return defaults();
@@ -65,7 +65,7 @@ public final class TagConfig {
     }
 
     private static TagConfig defaults() {
-        return new TagConfig("Essentials", Formatting.DARK_PURPLE, Formatting.DARK_GRAY, true);
+        return new TagConfig("Essentials", ChatFormatting.DARK_PURPLE, ChatFormatting.DARK_GRAY, true);
     }
 
     private static String coerceString(Object value, String def) {
@@ -83,10 +83,10 @@ public final class TagConfig {
         return def;
     }
 
-    private static Formatting parseFormatting(String name, Formatting def) {
+    private static ChatFormatting parseFormatting(String name, ChatFormatting def) {
         if (name == null || name.trim().isEmpty()) return def;
         try {
-            return Formatting.valueOf(name.trim().toUpperCase(Locale.ROOT));
+            return ChatFormatting.valueOf(name.trim().toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException e) {
             return null;
         }

@@ -5,43 +5,43 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 
 import f1nal.essentials.Messages;
 import f1nal.essentials.config.CommandConfig;
-import net.minecraft.command.CommandRegistryAccess;
-import net.minecraft.command.argument.EntityArgumentType;
-import net.minecraft.server.command.CommandManager;
-import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.commands.CommandBuildContext;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
+import net.minecraft.commands.arguments.EntityArgument;
+import net.minecraft.server.level.ServerPlayer;
 
 public final class HealCommand {
 
     private HealCommand() {
     }
 
-    public static void register(CommandDispatcher<ServerCommandSource> dispatcher, CommandRegistryAccess registryAccess, CommandManager.RegistrationEnvironment environment, CommandConfig.CommandSettings settings) {
-        LiteralArgumentBuilder<ServerCommandSource> root = CommandManager.literal("heal")
+    public static void register(CommandDispatcher<CommandSourceStack> dispatcher, CommandBuildContext registryAccess, Commands.CommandSelection environment, CommandConfig.CommandSettings settings) {
+        LiteralArgumentBuilder<CommandSourceStack> root = Commands.literal("heal")
                 .requires(settings.getPermissionRequirement())
                 .executes(ctx -> heal(ctx.getSource(), ctx.getSource().getPlayer()))
-                .then(CommandManager.argument("target", EntityArgumentType.player())
-                        .executes(ctx -> heal(ctx.getSource(), EntityArgumentType.getPlayer(ctx, "target"))));
+                .then(Commands.argument("target", EntityArgument.player())
+                        .executes(ctx -> heal(ctx.getSource(), EntityArgument.getPlayer(ctx, "target"))));
 
         dispatcher.register(root);
     }
 
-    private static int heal(ServerCommandSource source, ServerPlayerEntity target) {
+    private static int heal(CommandSourceStack source, ServerPlayer target) {
         if (target == null) {
-            source.sendError(Messages.error("You must be a player to use this command."));
+            source.sendFailure(Messages.error("You must be a player to use this command."));
             return 0;
         }
 
         float maxHealth = target.getMaxHealth();
         target.setHealth(maxHealth);
-        target.getHungerManager().setFoodLevel(20);
-        target.getHungerManager().setSaturationLevel(20.0F);
+        target.getFoodData().setFoodLevel(20);
+        target.getFoodData().setSaturation(20.0F);
 
         if (source.getEntity() == target) {
-            source.sendFeedback(() -> Messages.info("Healed to full health (" + maxHealth + ")"), false);
+            source.sendSuccess(() -> Messages.info("Healed to full health (" + maxHealth + ")"), false);
         } else {
-            source.sendFeedback(() -> Messages.info("Healed " + target.getName().getString() + " to full health (" + maxHealth + ")"), true);
-            target.sendMessage(Messages.info("Healed to full health by " + source.getName() + "."));
+            source.sendSuccess(() -> Messages.info("Healed " + target.getName().getString() + " to full health (" + maxHealth + ")"), true);
+            target.sendSystemMessage(Messages.info("Healed to full health by " + source.getTextName() + "."));
         }
 
         return 1;

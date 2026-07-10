@@ -1,10 +1,9 @@
 package f1nal.essentials.tpa;
 
 import f1nal.essentials.config.TpaConfig;
-import net.minecraft.server.network.ServerPlayerEntity;
-
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import net.minecraft.server.level.ServerPlayer;
 
 /**
  * Manages TPA/TPAHere requests with expiry and cancel cooldowns.
@@ -55,22 +54,22 @@ public final class TpaManager {
         return s * 1000L;
     }
 
-    public static Optional<Long> getSecondsLeftOnCancelCooldown(ServerPlayerEntity sender) {
+    public static Optional<Long> getSecondsLeftOnCancelCooldown(ServerPlayer sender) {
         long now = System.currentTimeMillis();
-        Long until = cancelCooldownUntil.get(sender.getUuid());
+        Long until = cancelCooldownUntil.get(sender.getUUID());
         if (until == null) return Optional.empty();
         if (until <= now) {
-            cancelCooldownUntil.remove(sender.getUuid());
+            cancelCooldownUntil.remove(sender.getUUID());
             return Optional.empty();
         }
         long seconds = (until - now + 999) / 1000;
         return Optional.of(seconds);
     }
 
-    public static synchronized boolean createRequest(ServerPlayerEntity sender, ServerPlayerEntity target, Type type) {
+    public static synchronized boolean createRequest(ServerPlayer sender, ServerPlayer target, Type type) {
         cleanupExpired();
-        UUID s = sender.getUuid();
-        UUID t = target.getUuid();
+        UUID s = sender.getUUID();
+        UUID t = target.getUUID();
 
         if (outgoingBySender.containsKey(s)) {
             return false;
@@ -88,33 +87,33 @@ public final class TpaManager {
         return true;
     }
 
-    public static synchronized Optional<Request> findIncomingFor(ServerPlayerEntity target, @org.jetbrains.annotations.Nullable ServerPlayerEntity from) {
+    public static synchronized Optional<Request> findIncomingFor(ServerPlayer target, @org.jetbrains.annotations.Nullable ServerPlayer from) {
         cleanupExpired();
-        List<Request> list = incomingByTarget.getOrDefault(target.getUuid(), Collections.emptyList());
+        List<Request> list = incomingByTarget.getOrDefault(target.getUUID(), Collections.emptyList());
         if (list.isEmpty()) return Optional.empty();
         if (from == null) {
             long now = System.currentTimeMillis();
             return list.stream().filter(r -> !r.isExpired(now)).max(Comparator.comparingLong(r -> r.createdAtMillis));
         }
-        UUID fromId = from.getUuid();
+        UUID fromId = from.getUUID();
         return list.stream().filter(r -> r.sender.equals(fromId)).findFirst();
     }
 
-    public static synchronized Optional<Request> accept(ServerPlayerEntity target, @org.jetbrains.annotations.Nullable ServerPlayerEntity from) {
+    public static synchronized Optional<Request> accept(ServerPlayer target, @org.jetbrains.annotations.Nullable ServerPlayer from) {
         Optional<Request> reqOpt = findIncomingFor(target, from);
         reqOpt.ifPresent(TpaManager::remove);
         return reqOpt;
     }
 
-    public static synchronized Optional<Request> deny(ServerPlayerEntity target, @org.jetbrains.annotations.Nullable ServerPlayerEntity from) {
+    public static synchronized Optional<Request> deny(ServerPlayer target, @org.jetbrains.annotations.Nullable ServerPlayer from) {
         Optional<Request> reqOpt = findIncomingFor(target, from);
         reqOpt.ifPresent(TpaManager::remove);
         return reqOpt;
     }
 
-    public static synchronized boolean cancel(ServerPlayerEntity sender) {
+    public static synchronized boolean cancel(ServerPlayer sender) {
         cleanupExpired();
-        UUID s = sender.getUuid();
+        UUID s = sender.getUUID();
         Request req = outgoingBySender.remove(s);
         if (req == null) return false;
         List<Request> list = incomingByTarget.get(req.target);

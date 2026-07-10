@@ -5,52 +5,52 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 
 import f1nal.essentials.Messages;
 import f1nal.essentials.config.CommandConfig;
-import net.minecraft.command.CommandRegistryAccess;
-import net.minecraft.command.argument.EntityArgumentType;
-import net.minecraft.item.ItemStack;
-import net.minecraft.server.command.CommandManager;
-import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.commands.CommandBuildContext;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
+import net.minecraft.commands.arguments.EntityArgument;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.ItemStack;
 
 public final class RepairCommand {
 
     private RepairCommand() {
     }
 
-    public static void register(CommandDispatcher<ServerCommandSource> dispatcher, CommandRegistryAccess registryAccess, CommandManager.RegistrationEnvironment environment, CommandConfig.CommandSettings settings) {
-        LiteralArgumentBuilder<ServerCommandSource> root = CommandManager.literal("repair")
+    public static void register(CommandDispatcher<CommandSourceStack> dispatcher, CommandBuildContext registryAccess, Commands.CommandSelection environment, CommandConfig.CommandSettings settings) {
+        LiteralArgumentBuilder<CommandSourceStack> root = Commands.literal("repair")
                 .requires(settings.getPermissionRequirement())
                 .executes(ctx -> repair(ctx.getSource(), ctx.getSource().getPlayer()))
-                .then(CommandManager.argument("target", EntityArgumentType.player())
-                        .executes(ctx -> repair(ctx.getSource(), EntityArgumentType.getPlayer(ctx, "target"))));
+                .then(Commands.argument("target", EntityArgument.player())
+                        .executes(ctx -> repair(ctx.getSource(), EntityArgument.getPlayer(ctx, "target"))));
 
         dispatcher.register(root);
     }
 
-    private static int repair(ServerCommandSource source, ServerPlayerEntity target) {
+    private static int repair(CommandSourceStack source, ServerPlayer target) {
         if (target == null) {
-            source.sendError(Messages.error("You must be a player to use this command."));
+            source.sendFailure(Messages.error("You must be a player to use this command."));
             return 0;
         }
 
-        ItemStack stack = target.getMainHandStack();
+        ItemStack stack = target.getMainHandItem();
         if (stack.isEmpty()) {
-            source.sendError(Messages.error(target.getName().getString() + " has an empty main hand."));
+            source.sendFailure(Messages.error(target.getName().getString() + " has an empty main hand."));
             return 0;
         }
 
-        if (!stack.isDamageable()) {
-            source.sendFeedback(() -> Messages.warning("The item in main hand is not damageable: " + stack.getName().getString()), false);
+        if (!stack.isDamageableItem()) {
+            source.sendSuccess(() -> Messages.warning("The item in main hand is not damageable: " + stack.getHoverName().getString()), false);
             return 1;
         }
 
-        stack.setDamage(0);
+        stack.setDamageValue(0);
 
         if (source.getEntity() == target) {
-            source.sendFeedback(() -> Messages.info("Repaired main-hand item: " + stack.getName().getString()), false);
+            source.sendSuccess(() -> Messages.info("Repaired main-hand item: " + stack.getHoverName().getString()), false);
         } else {
-            source.sendFeedback(() -> Messages.info("Repaired " + target.getName().getString() + "'s main-hand item: " + stack.getName().getString()), true);
-            target.sendMessage(Messages.info("Main-hand item was repaired by " + source.getName() + "."));
+            source.sendSuccess(() -> Messages.info("Repaired " + target.getName().getString() + "'s main-hand item: " + stack.getHoverName().getString()), true);
+            target.sendSystemMessage(Messages.info("Main-hand item was repaired by " + source.getTextName() + "."));
         }
 
         return 1;

@@ -1,9 +1,9 @@
 package f1nal.essentials;
 
 import f1nal.essentials.config.TagConfig;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 
 public final class Messages {
 
@@ -12,45 +12,45 @@ public final class Messages {
     private Messages() {
     }
 
-    public static MutableText prefix() {
+    public static MutableComponent prefix() {
         if (TAG.bold) {
-            return Text.literal("[")
-                    .formatted(TAG.bracketColor)
-                    .append(Text.literal(TAG.text).formatted(TAG.color, Formatting.BOLD))
-                    .append(Text.literal("] ").formatted(TAG.bracketColor));
+            return Component.literal("[")
+                    .withStyle(TAG.bracketColor)
+                    .append(Component.literal(TAG.text).withStyle(TAG.color, ChatFormatting.BOLD))
+                    .append(Component.literal("] ").withStyle(TAG.bracketColor));
         }
-        return Text.literal("[")
-                .formatted(TAG.bracketColor)
-                .append(Text.literal(TAG.text).formatted(TAG.color))
-                .append(Text.literal("] ").formatted(TAG.bracketColor));
+        return Component.literal("[")
+                .withStyle(TAG.bracketColor)
+                .append(Component.literal(TAG.text).withStyle(TAG.color))
+                .append(Component.literal("] ").withStyle(TAG.bracketColor));
     }
 
-    public static Text info(String message) {
-        return prefix().append(Text.literal(message).formatted(Formatting.GRAY));
+    public static Component info(String message) {
+        return prefix().append(Component.literal(message).withStyle(ChatFormatting.GRAY));
     }
 
-    public static Text success(String message) {
-        return prefix().append(Text.literal(message).formatted(Formatting.GREEN));
+    public static Component success(String message) {
+        return prefix().append(Component.literal(message).withStyle(ChatFormatting.GREEN));
     }
 
-    public static Text warning(String message) {
-        return prefix().append(Text.literal(message).formatted(Formatting.YELLOW));
+    public static Component warning(String message) {
+        return prefix().append(Component.literal(message).withStyle(ChatFormatting.YELLOW));
     }
 
-    public static Text error(String message) {
-        return prefix().append(Text.literal(message).formatted(Formatting.RED));
+    public static Component error(String message) {
+        return prefix().append(Component.literal(message).withStyle(ChatFormatting.RED));
     }
 
-    public static Text custom(Text message) {
+    public static Component custom(Component message) {
         return prefix().append(message);
     }
 
-    public static Text raw(String message, Formatting... formats) {
-        MutableText body = Text.literal(message);
+    public static Component raw(String message, ChatFormatting... formats) {
+        MutableComponent body = Component.literal(message);
         if (formats != null) {
-            for (Formatting fmt : formats) {
+            for (ChatFormatting fmt : formats) {
                 if (fmt != null) {
-                    body.formatted(fmt);
+                    body.withStyle(fmt);
                 }
             }
         }

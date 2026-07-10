@@ -1,12 +1,11 @@
 package f1nal.essentials.back;
 
 import f1nal.essentials.config.BackConfig;
-import net.minecraft.registry.RegistryKey;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.world.World;
-
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.Level;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -18,12 +17,12 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class BackManager {
 
     public static final class BackEntry {
-        public final RegistryKey<World> worldKey;
+        public final ResourceKey<Level> worldKey;
         public final double x, y, z;
         public final float yaw, pitch;
         public final long expiresAtMillis;
 
-        public BackEntry(RegistryKey<World> worldKey, double x, double y, double z, float yaw, float pitch, long expiresAtMillis) {
+        public BackEntry(ResourceKey<Level> worldKey, double x, double y, double z, float yaw, float pitch, long expiresAtMillis) {
             this.worldKey = worldKey;
             this.x = x;
             this.y = y;
@@ -46,31 +45,31 @@ public final class BackManager {
         return Math.max(1, BackConfig.get().windowSeconds) * 1000L;
     }
 
-    public static void markBackPosition(ServerPlayerEntity player) {
+    public static void markBackPosition(ServerPlayer player) {
         long now = System.currentTimeMillis();
         BackEntry entry = new BackEntry(
-                player.getEntityWorld().getRegistryKey(),
+                player.level().dimension(),
                 player.getX(), player.getY(), player.getZ(),
-                player.getYaw(), player.getPitch(),
+                player.getYRot(), player.getXRot(),
                 now + windowMillis()
         );
-        entries.put(player.getUuid(), entry);
+        entries.put(player.getUUID(), entry);
     }
 
-    public static Optional<BackEntry> peek(ServerPlayerEntity player) {
+    public static Optional<BackEntry> peek(ServerPlayer player) {
         cleanup();
-        BackEntry e = entries.get(player.getUuid());
+        BackEntry e = entries.get(player.getUUID());
         if (e == null) return Optional.empty();
         if (e.isExpired(System.currentTimeMillis())) {
-            entries.remove(player.getUuid());
+            entries.remove(player.getUUID());
             return Optional.empty();
         }
         return Optional.of(e);
     }
 
-    public static Optional<BackEntry> consume(ServerPlayerEntity player) {
+    public static Optional<BackEntry> consume(ServerPlayer player) {
         cleanup();
-        UUID id = player.getUuid();
+        UUID id = player.getUUID();
         BackEntry e = entries.get(id);
         if (e == null) return Optional.empty();
         if (e.isExpired(System.currentTimeMillis())) {
@@ -86,15 +85,15 @@ public final class BackManager {
         entries.entrySet().removeIf(en -> en.getValue().isExpired(now));
     }
 
-    public static boolean teleportBack(ServerPlayerEntity player) {
+    public static boolean teleportBack(ServerPlayer player) {
         Optional<BackEntry> opt = consume(player);
         if (opt.isEmpty()) return false;
         BackEntry e = opt.get();
-        MinecraftServer server = player.getEntityWorld().getServer();
+        MinecraftServer server = player.level().getServer();
         if (server == null) return false;
-        ServerWorld world = server.getWorld(e.worldKey);
+        ServerLevel world = server.getLevel(e.worldKey);
         if (world == null) return false;
-        player.teleport(world, e.x, e.y, e.z, java.util.Set.of(), e.yaw, e.pitch, false);
+        player.teleportTo(world, e.x, e.y, e.z, java.util.Set.of(), e.yaw, e.pitch, false);
         return true;
     }
 }

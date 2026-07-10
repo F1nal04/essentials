@@ -3,20 +3,18 @@ package f1nal.essentials.backpack;
 import f1nal.essentials.Essentials;
 import f1nal.essentials.config.BackpackConfig;
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.inventory.Inventories;
-import net.minecraft.inventory.Inventory;
-import net.minecraft.inventory.SimpleInventory;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NbtCompound;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.NbtAccounter;
 import net.minecraft.nbt.NbtIo;
-import net.minecraft.nbt.NbtSizeTracker;
-import net.minecraft.nbt.NbtElement;
-import net.minecraft.nbt.NbtList;
-import net.minecraft.registry.RegistryWrapper;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.util.collection.DefaultedList;
+import net.minecraft.world.Container;
+import net.minecraft.world.SimpleContainer;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.nbt.NbtOps;
-import net.minecraft.registry.RegistryOps;
+import net.minecraft.nbt.Tag;
+import net.minecraft.resources.RegistryOps;
 import com.mojang.serialization.DataResult;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -34,8 +32,8 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class BackpackManager {
 
-    private static final Map<UUID, SimpleInventory> playerBackpacks = new ConcurrentHashMap<>();
-    private static SimpleInventory serverwideBackpack = null;
+    private static final Map<UUID, SimpleContainer> playerBackpacks = new ConcurrentHashMap<>();
+    private static SimpleContainer serverwideBackpack = null;
     private static Path dataDir;
 
     private BackpackManager() {
@@ -59,7 +57,7 @@ public final class BackpackManager {
      * Gets or creates a backpack inventory for the given player. In serverwide
      * mode, returns the shared backpack.
      */
-    public static SimpleInventory getOrCreateBackpack(UUID playerId, MinecraftServer server) {
+    public static SimpleContainer getOrCreateBackpack(UUID playerId, MinecraftServer server) {
         if (!BackpackConfig.get().perPlayer) {
             // Serverwide mode - everyone shares the same backpack
             if (serverwideBackpack == null) {
@@ -76,7 +74,7 @@ public final class BackpackManager {
      * Saves a player's backpack to disk. In serverwide mode, saves the shared
      * backpack.
      */
-    public static void saveBackpack(UUID playerId, Inventory inventory, MinecraftServer server) {
+    public static void saveBackpack(UUID playerId, Container inventory, MinecraftServer server) {
         if (!BackpackConfig.get().perPlayer) {
             // Save serverwide backpack
             saveServerwideBackpack(inventory, server);
@@ -95,7 +93,7 @@ public final class BackpackManager {
                 saveServerwideBackpack(serverwideBackpack, server);
             }
         } else {
-            for (Map.Entry<UUID, SimpleInventory> entry : playerBackpacks.entrySet()) {
+            for (Map.Entry<UUID, SimpleContainer> entry : playerBackpacks.entrySet()) {
                 savePlayerBackpack(entry.getKey(), entry.getValue(), server);
             }
         }
@@ -110,8 +108,8 @@ public final class BackpackManager {
         }
     }
 
-    private static SimpleInventory loadPlayerBackpack(UUID playerId, MinecraftServer server) {
-        SimpleInventory inventory = new SimpleInventory(27);
+    private static SimpleContainer loadPlayerBackpack(UUID playerId, MinecraftServer server) {
+        SimpleContainer inventory = new SimpleContainer(27);
         Path file = dataDir.resolve(playerId.toString() + ".nbt");
 
         if (!Files.exists(file)) {
@@ -119,7 +117,7 @@ public final class BackpackManager {
         }
 
         try (FileInputStream fis = new FileInputStream(file.toFile())) {
-            NbtCompound nbt = NbtIo.readCompressed(fis, NbtSizeTracker.ofUnlimitedBytes());
+            CompoundTag nbt = NbtIo.readCompressed(fis, NbtAccounter.unlimitedHeap());
             loadInventoryFromNbt(inventory, nbt, server);
         } catch (IOException e) {
             Essentials.LOGGER.error("Failed to load backpack for player {}", playerId, e);
@@ -128,8 +126,8 @@ public final class BackpackManager {
         return inventory;
     }
 
-    private static SimpleInventory loadServerwideBackpack(MinecraftServer server) {
-        SimpleInventory inventory = new SimpleInventory(27);
+    private static SimpleContainer loadServerwideBackpack(MinecraftServer server) {
+        SimpleContainer inventory = new SimpleContainer(27);
         Path file = dataDir.resolve("serverwide.nbt");
 
         if (!Files.exists(file)) {
@@ -137,7 +135,7 @@ public final class BackpackManager {
         }
 
         try (FileInputStream fis = new FileInputStream(file.toFile())) {
-            NbtCompound nbt = NbtIo.readCompressed(fis, NbtSizeTracker.ofUnlimitedBytes());
+            CompoundTag nbt = NbtIo.readCompressed(fis, NbtAccounter.unlimitedHeap());
             loadInventoryFromNbt(inventory, nbt, server);
         } catch (IOException e) {
             Essentials.LOGGER.error("Failed to load serverwide backpack", e);
@@ -146,9 +144,9 @@ public final class BackpackManager {
         return inventory;
     }
 
-    private static void savePlayerBackpack(UUID playerId, Inventory inventory, MinecraftServer server) {
+    private static void savePlayerBackpack(UUID playerId, Container inventory, MinecraftServer server) {
         Path file = dataDir.resolve(playerId.toString() + ".nbt");
-        NbtCompound nbt = saveInventoryToNbt(inventory, server);
+        CompoundTag nbt = saveInventoryToNbt(inventory, server);
 
         try (FileOutputStream fos = new FileOutputStream(file.toFile())) {
             NbtIo.writeCompressed(nbt, fos);
@@ -157,9 +155,9 @@ public final class BackpackManager {
         }
     }
 
-    private static void saveServerwideBackpack(Inventory inventory, MinecraftServer server) {
+    private static void saveServerwideBackpack(Container inventory, MinecraftServer server) {
         Path file = dataDir.resolve("serverwide.nbt");
-        NbtCompound nbt = saveInventoryToNbt(inventory, server);
+        CompoundTag nbt = saveInventoryToNbt(inventory, server);
 
         try (FileOutputStream fos = new FileOutputStream(file.toFile())) {
             NbtIo.writeCompressed(nbt, fos);
@@ -168,41 +166,41 @@ public final class BackpackManager {
         }
     }
 
-    private static void loadInventoryFromNbt(SimpleInventory inventory, NbtCompound nbt, MinecraftServer server) {
-        RegistryWrapper.WrapperLookup registries = server.getRegistryManager();
-        RegistryOps<NbtElement> ops = RegistryOps.of(NbtOps.INSTANCE, registries);
-        NbtList list = nbt.getList("Items").orElseGet(NbtList::new);
+    private static void loadInventoryFromNbt(SimpleContainer inventory, CompoundTag nbt, MinecraftServer server) {
+        HolderLookup.Provider registries = server.registryAccess();
+        RegistryOps<Tag> ops = RegistryOps.create(NbtOps.INSTANCE, registries);
+        ListTag list = nbt.getList("Items").orElseGet(ListTag::new);
 
         // Initialize with empty stacks
-        for (int i = 0; i < inventory.size(); i++) {
-            inventory.setStack(i, ItemStack.EMPTY);
+        for (int i = 0; i < inventory.getContainerSize(); i++) {
+            inventory.setItem(i, ItemStack.EMPTY);
         }
 
         for (int i = 0; i < list.size(); i++) {
             var maybeTag = list.getCompound(i);
             if (maybeTag.isEmpty()) continue;
-            NbtCompound stackTag = maybeTag.get();
+            CompoundTag stackTag = maybeTag.get();
             int slot = (stackTag.getByte("Slot").orElse((byte) -1)) & 255;
-            if (slot >= 0 && slot < inventory.size()) {
+            if (slot >= 0 && slot < inventory.getContainerSize()) {
                 DataResult<ItemStack> parsed = ItemStack.CODEC.parse(ops, stackTag);
                 ItemStack stack = parsed.result().orElse(ItemStack.EMPTY);
-                inventory.setStack(slot, stack);
+                inventory.setItem(slot, stack);
             }
         }
     }
 
-    private static NbtCompound saveInventoryToNbt(Inventory inventory, MinecraftServer server) {
-        NbtCompound nbt = new NbtCompound();
-        RegistryWrapper.WrapperLookup registries = server.getRegistryManager();
-        RegistryOps<NbtElement> ops = RegistryOps.of(NbtOps.INSTANCE, registries);
+    private static CompoundTag saveInventoryToNbt(Container inventory, MinecraftServer server) {
+        CompoundTag nbt = new CompoundTag();
+        HolderLookup.Provider registries = server.registryAccess();
+        RegistryOps<Tag> ops = RegistryOps.create(NbtOps.INSTANCE, registries);
 
-        NbtList list = new NbtList();
-        for (int i = 0; i < inventory.size(); i++) {
-            ItemStack stack = inventory.getStack(i);
+        ListTag list = new ListTag();
+        for (int i = 0; i < inventory.getContainerSize(); i++) {
+            ItemStack stack = inventory.getItem(i);
             if (!stack.isEmpty()) {
-                DataResult<NbtElement> encoded = ItemStack.CODEC.encodeStart(ops, stack);
-                NbtElement el = encoded.result().orElseGet(NbtCompound::new);
-                if (el instanceof NbtCompound stackTag) {
+                DataResult<Tag> encoded = ItemStack.CODEC.encodeStart(ops, stack);
+                Tag el = encoded.result().orElseGet(CompoundTag::new);
+                if (el instanceof CompoundTag stackTag) {
                     stackTag.putByte("Slot", (byte) i);
                     list.add(stackTag);
                 }

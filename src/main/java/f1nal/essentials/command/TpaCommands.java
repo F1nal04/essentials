@@ -12,49 +12,49 @@ import f1nal.essentials.Messages;
 import f1nal.essentials.config.CommandConfig;
 import f1nal.essentials.tpa.TpaManager;
 import f1nal.essentials.back.BackManager;
-import net.minecraft.command.CommandRegistryAccess;
-import net.minecraft.command.argument.EntityArgumentType;
+import net.minecraft.ChatFormatting;
+import net.minecraft.commands.CommandBuildContext;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
+import net.minecraft.commands.arguments.EntityArgument;
+import net.minecraft.network.chat.ClickEvent;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.HoverEvent;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.command.CommandManager;
-import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.ClickEvent;
-import net.minecraft.text.HoverEvent;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
+import net.minecraft.server.level.ServerPlayer;
 
 public final class TpaCommands {
 
     private TpaCommands() {
     }
 
-    public static void register(CommandDispatcher<ServerCommandSource> dispatcher, CommandRegistryAccess registryAccess, CommandManager.RegistrationEnvironment environment, CommandConfig.CommandSettings settings) {
-        LiteralArgumentBuilder<ServerCommandSource> tpa = CommandManager.literal("tpa")
+    public static void register(CommandDispatcher<CommandSourceStack> dispatcher, CommandBuildContext registryAccess, Commands.CommandSelection environment, CommandConfig.CommandSettings settings) {
+        LiteralArgumentBuilder<CommandSourceStack> tpa = Commands.literal("tpa")
                 .requires(settings.getPermissionRequirement())
-                .then(CommandManager.argument("target", EntityArgumentType.player())
-                        .executes(ctx -> sendTpa(ctx, EntityArgumentType.getPlayer(ctx, "target"))));
+                .then(Commands.argument("target", EntityArgument.player())
+                        .executes(ctx -> sendTpa(ctx, EntityArgument.getPlayer(ctx, "target"))));
 
-        LiteralArgumentBuilder<ServerCommandSource> tpahere = CommandManager.literal("tpahere")
+        LiteralArgumentBuilder<CommandSourceStack> tpahere = Commands.literal("tpahere")
                 .requires(settings.getPermissionRequirement())
-                .then(CommandManager.literal("all")
+                .then(Commands.literal("all")
                         .executes(TpaCommands::sendTpahereAll))
-                .then(CommandManager.argument("target", EntityArgumentType.player())
-                        .executes(ctx -> sendTpahere(ctx, EntityArgumentType.getPlayer(ctx, "target"))));
+                .then(Commands.argument("target", EntityArgument.player())
+                        .executes(ctx -> sendTpahere(ctx, EntityArgument.getPlayer(ctx, "target"))));
 
-        LiteralArgumentBuilder<ServerCommandSource> tpaccept = CommandManager.literal("tpaccept")
+        LiteralArgumentBuilder<CommandSourceStack> tpaccept = Commands.literal("tpaccept")
                 .requires(settings.getPermissionRequirement())
                 .executes(ctx -> accept(ctx, null))
-                .then(CommandManager.argument("player", EntityArgumentType.player())
-                        .executes(ctx -> accept(ctx, EntityArgumentType.getPlayer(ctx, "player"))));
+                .then(Commands.argument("player", EntityArgument.player())
+                        .executes(ctx -> accept(ctx, EntityArgument.getPlayer(ctx, "player"))));
 
-        LiteralArgumentBuilder<ServerCommandSource> tpdeny = CommandManager.literal("tpdeny")
+        LiteralArgumentBuilder<CommandSourceStack> tpdeny = Commands.literal("tpdeny")
                 .requires(settings.getPermissionRequirement())
                 .executes(ctx -> deny(ctx, null))
-                .then(CommandManager.argument("player", EntityArgumentType.player())
-                        .executes(ctx -> deny(ctx, EntityArgumentType.getPlayer(ctx, "player"))));
+                .then(Commands.argument("player", EntityArgument.player())
+                        .executes(ctx -> deny(ctx, EntityArgument.getPlayer(ctx, "player"))));
 
-        LiteralArgumentBuilder<ServerCommandSource> tpcancel = CommandManager.literal("tpcancel")
+        LiteralArgumentBuilder<CommandSourceStack> tpcancel = Commands.literal("tpcancel")
                 .requires(settings.getPermissionRequirement())
                 .executes(TpaCommands::cancel);
 
@@ -65,82 +65,82 @@ public final class TpaCommands {
         dispatcher.register(tpcancel);
     }
 
-    private static int sendTpa(CommandContext<ServerCommandSource> ctx, ServerPlayerEntity target) {
-        ServerCommandSource source = ctx.getSource();
-        ServerPlayerEntity sender = source.getPlayer();
+    private static int sendTpa(CommandContext<CommandSourceStack> ctx, ServerPlayer target) {
+        CommandSourceStack source = ctx.getSource();
+        ServerPlayer sender = source.getPlayer();
         if (sender == null) {
-            source.sendError(Messages.error("You must be a player to use this command."));
+            source.sendFailure(Messages.error("You must be a player to use this command."));
             return 0;
         }
         if (sender == target) {
-            source.sendError(Messages.error("You cannot send a TPA request to yourself."));
+            source.sendFailure(Messages.error("You cannot send a TPA request to yourself."));
             return 0;
         }
 
         Optional<Long> cd = TpaManager.getSecondsLeftOnCancelCooldown(sender);
         if (cd.isPresent()) {
-            source.sendError(Messages.error("You must wait " + cd.get() + "s before sending another request."));
+            source.sendFailure(Messages.error("You must wait " + cd.get() + "s before sending another request."));
             return 0;
         }
 
         boolean created = TpaManager.createRequest(sender, target, TpaManager.Type.TPA);
         if (!created) {
-            source.sendError(Messages.error("You already have a pending request."));
+            source.sendFailure(Messages.error("You already have a pending request."));
             return 0;
         }
 
-        source.sendFeedback(() -> Messages.info("TPA request sent to " + target.getName().getString() + "."), false);
+        source.sendSuccess(() -> Messages.info("TPA request sent to " + target.getName().getString() + "."), false);
         sendButtonsToTarget(target, sender, false);
         return 1;
     }
 
-    private static int sendTpahere(CommandContext<ServerCommandSource> ctx, ServerPlayerEntity target) {
-        ServerCommandSource source = ctx.getSource();
-        ServerPlayerEntity sender = source.getPlayer();
+    private static int sendTpahere(CommandContext<CommandSourceStack> ctx, ServerPlayer target) {
+        CommandSourceStack source = ctx.getSource();
+        ServerPlayer sender = source.getPlayer();
         if (sender == null) {
-            source.sendError(Messages.error("You must be a player to use this command."));
+            source.sendFailure(Messages.error("You must be a player to use this command."));
             return 0;
         }
         if (sender == target) {
-            source.sendError(Messages.error("You cannot send a TPAHere request to yourself."));
+            source.sendFailure(Messages.error("You cannot send a TPAHere request to yourself."));
             return 0;
         }
 
         Optional<Long> cd = TpaManager.getSecondsLeftOnCancelCooldown(sender);
         if (cd.isPresent()) {
-            source.sendError(Messages.error("You must wait " + cd.get() + "s before sending another request."));
+            source.sendFailure(Messages.error("You must wait " + cd.get() + "s before sending another request."));
             return 0;
         }
 
         boolean created = TpaManager.createRequest(sender, target, TpaManager.Type.TPA_HERE);
         if (!created) {
-            source.sendError(Messages.error("You already have a pending request."));
+            source.sendFailure(Messages.error("You already have a pending request."));
             return 0;
         }
-        source.sendFeedback(() -> Messages.info("TPAHere request sent to " + target.getName().getString() + "."), false);
+        source.sendSuccess(() -> Messages.info("TPAHere request sent to " + target.getName().getString() + "."), false);
         sendButtonsToTarget(target, sender, true);
         return 1;
     }
 
-    private static int sendTpahereAll(CommandContext<ServerCommandSource> ctx) {
-        ServerCommandSource source = ctx.getSource();
-        ServerPlayerEntity sender = source.getPlayer();
+    private static int sendTpahereAll(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack source = ctx.getSource();
+        ServerPlayer sender = source.getPlayer();
         if (sender == null) {
-            source.sendError(Messages.error("You must be a player to use this command."));
+            source.sendFailure(Messages.error("You must be a player to use this command."));
             return 0;
         }
         Optional<Long> cd = TpaManager.getSecondsLeftOnCancelCooldown(sender);
         if (cd.isPresent()) {
-            source.sendError(Messages.error("You must wait " + cd.get() + "s before sending another request."));
+            source.sendFailure(Messages.error("You must wait " + cd.get() + "s before sending another request."));
             return 0;
         }
-        MinecraftServer server = sender.getEntityWorld().getServer();
+        MinecraftServer server = sender.level().getServer();
         if (server == null) {
             return 0;
         }
-        List<ServerPlayerEntity> players = server.getPlayerManager().getPlayerList();
+        List<ServerPlayer> players = server.getPlayerList().getPlayers();
         int count = 0;
-        for (ServerPlayerEntity p : players) {
+        for (ServerPlayer p : players) {
             if (p == sender) {
                 continue;
             }
@@ -150,123 +150,123 @@ public final class TpaCommands {
             }
         }
         if (count == 0) {
-            source.sendError(Messages.error("Failed to create any requests (you may already have one pending)."));
+            source.sendFailure(Messages.error("Failed to create any requests (you may already have one pending)."));
             return 0;
         }
         final int cnt = count;
-        source.sendFeedback(() -> Messages.info("TPAHere request sent to " + cnt + " player(s)."), false);
+        source.sendSuccess(() -> Messages.info("TPAHere request sent to " + cnt + " player(s)."), false);
         return 1;
     }
 
-    private static int accept(CommandContext<ServerCommandSource> ctx, ServerPlayerEntity from) {
-        ServerCommandSource source = ctx.getSource();
-        ServerPlayerEntity target = source.getPlayer();
+    private static int accept(CommandContext<CommandSourceStack> ctx, ServerPlayer from) {
+        CommandSourceStack source = ctx.getSource();
+        ServerPlayer target = source.getPlayer();
         if (target == null) {
-            source.sendError(Messages.error("You must be a player to use this command."));
+            source.sendFailure(Messages.error("You must be a player to use this command."));
             return 0;
         }
         Optional<TpaManager.Request> reqOpt = TpaManager.accept(target, from);
         if (reqOpt.isEmpty()) {
-            source.sendError(Messages.error("No pending request found."));
+            source.sendFailure(Messages.error("No pending request found."));
             return 0;
         }
         TpaManager.Request req = reqOpt.get();
-        MinecraftServer server = target.getEntityWorld().getServer();
+        MinecraftServer server = target.level().getServer();
         if (server == null) {
             return 0;
         }
-        ServerPlayerEntity sender = server.getPlayerManager().getPlayer(req.sender);
+        ServerPlayer sender = server.getPlayerList().getPlayer(req.sender);
         if (sender == null) {
-            source.sendError(Messages.error("The requester is no longer online."));
+            source.sendFailure(Messages.error("The requester is no longer online."));
             return 0;
         }
 
         if (req.type == TpaManager.Type.TPA) {
             // sender -> target
             BackManager.markBackPosition(sender); // record sender's previous position
-            sender.teleport(target.getEntityWorld(), target.getX(), target.getY(), target.getZ(),
+            sender.teleportTo(target.level(), target.getX(), target.getY(), target.getZ(),
                     Set.of(),
-                    target.getYaw(), target.getPitch(), false);
+                    target.getYRot(), target.getXRot(), false);
         } else {
             // target -> sender
             BackManager.markBackPosition(target); // record target's previous position
-            target.teleport(sender.getEntityWorld(), sender.getX(), sender.getY(), sender.getZ(),
+            target.teleportTo(sender.level(), sender.getX(), sender.getY(), sender.getZ(),
                     Set.of(),
-                    sender.getYaw(), sender.getPitch(), false);
+                    sender.getYRot(), sender.getXRot(), false);
         }
 
-        sender.sendMessage(Messages.success("Teleport request accepted by " + target.getName().getString() + "."));
-        target.sendMessage(Messages.success("Teleport request accepted."));
+        sender.sendSystemMessage(Messages.success("Teleport request accepted by " + target.getName().getString() + "."));
+        target.sendSystemMessage(Messages.success("Teleport request accepted."));
         return 1;
     }
 
-    private static int deny(CommandContext<ServerCommandSource> ctx, ServerPlayerEntity from) {
-        ServerCommandSource source = ctx.getSource();
-        ServerPlayerEntity target = source.getPlayer();
+    private static int deny(CommandContext<CommandSourceStack> ctx, ServerPlayer from) {
+        CommandSourceStack source = ctx.getSource();
+        ServerPlayer target = source.getPlayer();
         if (target == null) {
-            source.sendError(Messages.error("You must be a player to use this command."));
+            source.sendFailure(Messages.error("You must be a player to use this command."));
             return 0;
         }
         Optional<TpaManager.Request> reqOpt = TpaManager.deny(target, from);
         if (reqOpt.isEmpty()) {
-            source.sendError(Messages.error("No pending request found."));
+            source.sendFailure(Messages.error("No pending request found."));
             return 0;
         }
         TpaManager.Request req = reqOpt.get();
-        MinecraftServer server = target.getEntityWorld().getServer();
+        MinecraftServer server = target.level().getServer();
         if (server != null) {
-            ServerPlayerEntity sender = server.getPlayerManager().getPlayer(req.sender);
+            ServerPlayer sender = server.getPlayerList().getPlayer(req.sender);
             if (sender != null) {
-                sender.sendMessage(Messages.warning(target.getName().getString() + " declined your teleport request."));
+                sender.sendSystemMessage(Messages.warning(target.getName().getString() + " declined your teleport request."));
             }
         }
-        target.sendMessage(Messages.info("Teleport request declined."));
+        target.sendSystemMessage(Messages.info("Teleport request declined."));
         return 1;
     }
 
-    private static int cancel(CommandContext<ServerCommandSource> ctx) {
-        ServerCommandSource source = ctx.getSource();
-        ServerPlayerEntity sender = source.getPlayer();
+    private static int cancel(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack source = ctx.getSource();
+        ServerPlayer sender = source.getPlayer();
         if (sender == null) {
-            source.sendError(Messages.error("You must be a player to use this command."));
+            source.sendFailure(Messages.error("You must be a player to use this command."));
             return 0;
         }
         boolean cancelled = TpaManager.cancel(sender);
         if (!cancelled) {
-            source.sendError(Messages.error("You have no pending request to cancel."));
+            source.sendFailure(Messages.error("You have no pending request to cancel."));
             return 0;
         }
         int cd = f1nal.essentials.config.TpaConfig.get().cooldownSeconds;
-        source.sendFeedback(() -> Messages.info("Teleport request cancelled. You must wait " + cd + "s before sending another."), false);
+        source.sendSuccess(() -> Messages.info("Teleport request cancelled. You must wait " + cd + "s before sending another."), false);
 
         return 1;
     }
 
-    private static void sendButtonsToTarget(ServerPlayerEntity target, ServerPlayerEntity sender, boolean here) {
+    private static void sendButtonsToTarget(ServerPlayer target, ServerPlayer sender, boolean here) {
         String senderName = sender.getName().getString();
         String typeText = here ? "wants you to teleport to them" : "wants to teleport to you";
-        MutableText header = Text.empty()
-                .append(Text.literal(senderName).formatted(Formatting.WHITE))
-                .append(Text.literal(" " + typeText + ". ").formatted(Formatting.GRAY));
+        MutableComponent header = Component.empty()
+                .append(Component.literal(senderName).withStyle(ChatFormatting.WHITE))
+                .append(Component.literal(" " + typeText + ". ").withStyle(ChatFormatting.GRAY));
 
-        MutableText acceptBtn = Text.literal("[Accept]")
-                .formatted(Formatting.GREEN)
-                .styled(s -> s
+        MutableComponent acceptBtn = Component.literal("[Accept]")
+                .withStyle(ChatFormatting.GREEN)
+                .withStyle(s -> s
                 .withBold(true)
                 .withClickEvent(new ClickEvent.RunCommand("/tpaccept " + senderName))
-                .withHoverEvent(new HoverEvent.ShowText(Text.literal("Click to accept " + senderName + "'s request").formatted(Formatting.GRAY))))
-                .append(Text.literal(" "));
+                .withHoverEvent(new HoverEvent.ShowText(Component.literal("Click to accept " + senderName + "'s request").withStyle(ChatFormatting.GRAY))))
+                .append(Component.literal(" "));
 
-        MutableText denyBtn = Text.literal("[Decline]")
-                .formatted(Formatting.RED)
-                .styled(s -> s
+        MutableComponent denyBtn = Component.literal("[Decline]")
+                .withStyle(ChatFormatting.RED)
+                .withStyle(s -> s
                 .withBold(true)
                 .withClickEvent(new ClickEvent.RunCommand("/tpdeny " + senderName))
-                .withHoverEvent(new HoverEvent.ShowText(Text.literal("Click to decline " + senderName + "'s request").formatted(Formatting.GRAY))));
+                .withHoverEvent(new HoverEvent.ShowText(Component.literal("Click to decline " + senderName + "'s request").withStyle(ChatFormatting.GRAY))));
 
-        MutableText hint = Text.literal("Use /tpaccept " + senderName + " or /tpdeny " + senderName)
-                .formatted(Formatting.DARK_GRAY);
+        MutableComponent hint = Component.literal("Use /tpaccept " + senderName + " or /tpdeny " + senderName)
+                .withStyle(ChatFormatting.DARK_GRAY);
 
-        target.sendMessage(Messages.custom(header.append(Text.literal("\n")).append(acceptBtn).append(denyBtn).append(Text.literal("\n")).append(hint)));
+        target.sendSystemMessage(Messages.custom(header.append(Component.literal("\n")).append(acceptBtn).append(denyBtn).append(Component.literal("\n")).append(hint)));
     }
 }
