@@ -11,9 +11,10 @@ back:
   window_seconds: 120
 
 backpack:
-  # Mode: per_player | serverwide
+  # Mode: per_player | serverwide | ender_chest
   # per_player: each player has their own backpack
   # serverwide: all players share one backpack
+  # ender_chest: the backpack opens the player's ender chest
   mode: "per_player"
 
 tpa:
