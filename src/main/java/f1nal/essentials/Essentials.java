@@ -1,9 +1,5 @@
 package f1nal.essentials;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.Map;
 
 import org.slf4j.Logger;
@@ -20,11 +16,11 @@ import f1nal.essentials.command.RepairCommand;
 import f1nal.essentials.command.TpaCommands;
 import f1nal.essentials.config.CommandConfig;
 import f1nal.essentials.config.CommandConfig.CommandSettings;
+import f1nal.essentials.config.ConfigMigrator;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
-import net.fabricmc.loader.api.FabricLoader;
 
 public class Essentials implements ModInitializer {
 
@@ -34,7 +30,7 @@ public class Essentials implements ModInitializer {
 
     @Override
     public void onInitialize() {
-        copyDefaultConfigIfMissing();
+        ConfigMigrator.run();
         registerCommands();
         registerLifecycleEvents();
         LOGGER.info("Essentials initialized");
@@ -118,26 +114,5 @@ public class Essentials implements ModInitializer {
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
             BackpackManager.saveAndUnloadPlayer(handler.getPlayer().getUUID(), server);
         });
-    }
-
-    private void copyDefaultConfigIfMissing() {
-        Path configDir = FabricLoader.getInstance().getConfigDir();
-        Path target = configDir.resolve("essentials.yaml");
-        if (Files.exists(target)) {
-            return;
-        }
-        try {
-            Files.createDirectories(configDir);
-            try (InputStream in = Essentials.class.getClassLoader().getResourceAsStream("essentials.default.yaml")) {
-                if (in == null) {
-                    LOGGER.warn("Missing bundled essentials.default.yaml resource; skipping config copy.");
-                    return;
-                }
-                Files.copy(in, target);
-                LOGGER.info("Wrote default config to {}", target.toAbsolutePath());
-            }
-        } catch (IOException e) {
-            LOGGER.warn("Failed to write default config: {}", e.toString());
-        }
     }
 }
