@@ -1,6 +1,5 @@
 package f1nal.essentials.config;
 
-import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -18,16 +17,24 @@ import net.minecraft.commands.Commands;
 public final class CommandConfig {
 
     public static Map<String, CommandSettings> loadCommandSettings() {
+        Path cfg = FabricLoader.getInstance().getConfigDir().resolve("essentials.yaml");
+        if (!Files.exists(cfg)) {
+            return defaults();
+        }
+        try {
+            return parse(Files.readString(cfg, StandardCharsets.UTF_8));
+        } catch (Exception e) {
+            Essentials.LOGGER.warn("Failed to read command settings from essentials.yaml, using defaults: {}", e.toString());
+            return defaults();
+        }
+    }
+
+    static Map<String, CommandSettings> parse(String yamlText) {
         // Start from defaults so every known command always has settings,
         // even when the user's config file is partial or malformed.
         Map<String, CommandSettings> result = defaults();
-        Path cfg = FabricLoader.getInstance().getConfigDir().resolve("essentials.yaml");
-        if (!Files.exists(cfg)) {
-            return result;
-        }
-        try (Reader reader = Files.newBufferedReader(cfg, StandardCharsets.UTF_8)) {
-            Yaml yaml = new Yaml(new LoaderOptions());
-            Object root = yaml.load(reader);
+        try {
+            Object root = new Yaml(new LoaderOptions()).load(yamlText);
             if (!(root instanceof Map<?, ?> map)) {
                 return result;
             }

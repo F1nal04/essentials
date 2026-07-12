@@ -1,6 +1,5 @@
 package f1nal.essentials.config;
 
-import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -31,9 +30,17 @@ public final class TagConfig {
         if (!Files.exists(cfg)) {
             return defaults();
         }
-        try (Reader reader = Files.newBufferedReader(cfg, StandardCharsets.UTF_8)) {
-            Yaml yaml = new Yaml(new LoaderOptions());
-            Object root = yaml.load(reader);
+        try {
+            return parse(Files.readString(cfg, StandardCharsets.UTF_8));
+        } catch (Exception e) {
+            f1nal.essentials.Essentials.LOGGER.warn("Failed to read tag settings from essentials.yaml, using defaults: {}", e.toString());
+            return defaults();
+        }
+    }
+
+    static TagConfig parse(String yamlText) {
+        try {
+            Object root = new Yaml(new LoaderOptions()).load(yamlText);
             if (!(root instanceof Map<?, ?> map)) {
                 return defaults();
             }
@@ -70,17 +77,6 @@ public final class TagConfig {
 
     private static String coerceString(Object value, String def) {
         return value instanceof String s ? s : def;
-    }
-
-    private static boolean coerceBoolean(Object value, boolean def) {
-        if (value instanceof Boolean b) return b;
-        if (value instanceof String s) {
-            String n = s.trim().toLowerCase(Locale.ROOT);
-            if (n.equals("true") || n.equals("false")) {
-                return Boolean.parseBoolean(n);
-            }
-        }
-        return def;
     }
 
     private static ChatFormatting parseFormatting(String name, ChatFormatting def) {
