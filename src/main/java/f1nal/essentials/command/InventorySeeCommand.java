@@ -15,6 +15,7 @@ import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
@@ -76,6 +77,16 @@ public final class InventorySeeCommand {
                 int invIndex = InventoryViewLayout.mapSlot(view);
                 if (invIndex == InventoryViewLayout.LOCKED) {
                     addSlot(new LockedSlot(fillers, view - 41, x, y));
+                } else if (view >= 36 && view < 40) {
+                    EquipmentSlot equipmentSlot = switch (invIndex) {
+                        case 39 -> EquipmentSlot.HEAD;
+                        case 38 -> EquipmentSlot.CHEST;
+                        case 37 -> EquipmentSlot.LEGS;
+                        case 36 -> EquipmentSlot.FEET;
+                        default -> throw new IllegalStateException("Unexpected armor slot " + invIndex);
+                    };
+                    addSlot(new EquipmentViewSlot(targetInventory, invIndex, x, y,
+                            target, equipmentSlot));
                 } else {
                     addSlot(new Slot(targetInventory, invIndex, x, y));
                 }
@@ -135,6 +146,24 @@ public final class InventorySeeCommand {
             @Override
             public boolean mayPickup(Player player) {
                 return false;
+            }
+        }
+
+        private static final class EquipmentViewSlot extends Slot {
+
+            private final ServerPlayer target;
+            private final EquipmentSlot equipmentSlot;
+
+            EquipmentViewSlot(Container container, int index, int x, int y,
+                    ServerPlayer target, EquipmentSlot equipmentSlot) {
+                super(container, index, x, y);
+                this.target = target;
+                this.equipmentSlot = equipmentSlot;
+            }
+
+            @Override
+            public boolean mayPlace(ItemStack stack) {
+                return target.isEquippableInSlot(stack, equipmentSlot);
             }
         }
     }

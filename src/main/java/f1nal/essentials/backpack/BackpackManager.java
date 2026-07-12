@@ -21,11 +21,15 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 
 import java.io.IOException;
+import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.AtomicMoveNotSupportedException;
+import java.nio.file.StandardCopyOption;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import net.minecraft.world.level.storage.LevelResource;
 
 /**
  * Manages backpack inventories with persistent storage for the per-player and
@@ -43,9 +47,16 @@ public final class BackpackManager {
     }
 
     public static void initialize(MinecraftServer server) {
-        dataDir = FabricLoader.getInstance().getGameDir().resolve("essentials_data").resolve("backpacks");
+        // Keep each world's backpacks separate while retaining them across
+        // restarts of that world/server.
+        playerBackpacks.clear();
+        serverwideBackpack = null;
+        dataDir = server.getWorldPath(LevelResource.ROOT)
+                .resolve("essentials_data")
+                .resolve("backpacks");
         try {
             Files.createDirectories(dataDir);
+            migrateLegacyBackpacks();
         } catch (IOException e) {
             Essentials.LOGGER.error("Failed to create backpacks data directory", e);
         }
@@ -53,6 +64,29 @@ public final class BackpackManager {
         // Load serverwide backpack if in serverwide mode
         if (BackpackConfig.get().mode == Mode.SERVERWIDE) {
             serverwideBackpack = loadServerwideBackpack(server);
+        }
+    }
+
+    private static void migrateLegacyBackpacks() throws IOException {
+        Path legacyDir = FabricLoader.getInstance().getGameDir()
+                .resolve("essentials_data")
+                .resolve("backpacks");
+        if (legacyDir.equals(dataDir) || !Files.isDirectory(legacyDir)) {
+            return;
+        }
+
+        int copied = 0;
+        try (DirectoryStream<Path> files = Files.newDirectoryStream(legacyDir, "*.nbt")) {
+            for (Path source : files) {
+                Path destination = dataDir.resolve(source.getFileName());
+                if (Files.notExists(destination)) {
+                    Files.move(source, destination);
+                    copied++;
+                }
+            }
+        }
+        if (copied > 0) {
+            Essentials.LOGGER.info("Migrated {} legacy backpack file(s) into this world's save directory", copied);
         }
     }
 
@@ -104,6 +138,8 @@ public final class BackpackManager {
             case ENDER_CHEST -> {
             }
         }
+        playerBackpacks.clear();
+        serverwideBackpack = null;
     }
 
     /**
@@ -169,9 +205,8 @@ public final class BackpackManager {
     private static void savePlayerBackpack(UUID playerId, Container inventory, MinecraftServer server) {
         Path file = dataDir.resolve(playerId.toString() + ".nbt");
         CompoundTag nbt = saveInventoryToNbt(inventory, server);
-
-        try (FileOutputStream fos = new FileOutputStream(file.toFile())) {
-            NbtIo.writeCompressed(nbt, fos);
+        try {
+            writeAtomically(file, nbt);
         } catch (IOException e) {
             Essentials.LOGGER.error("Failed to save backpack for player {}", playerId, e);
         }
@@ -180,11 +215,29 @@ public final class BackpackManager {
     private static void saveServerwideBackpack(Container inventory, MinecraftServer server) {
         Path file = dataDir.resolve("serverwide.nbt");
         CompoundTag nbt = saveInventoryToNbt(inventory, server);
-
-        try (FileOutputStream fos = new FileOutputStream(file.toFile())) {
-            NbtIo.writeCompressed(nbt, fos);
+        try {
+            writeAtomically(file, nbt);
         } catch (IOException e) {
             Essentials.LOGGER.error("Failed to save serverwide backpack", e);
+        }
+    }
+
+    private static void writeAtomically(Path file, CompoundTag nbt) throws IOException {
+        Files.createDirectories(file.getParent());
+        Path temporary = Files.createTempFile(file.getParent(), file.getFileName().toString(), ".tmp");
+        try {
+            try (FileOutputStream fos = new FileOutputStream(temporary.toFile())) {
+                NbtIo.writeCompressed(nbt, fos);
+                fos.getFD().sync();
+            }
+            try {
+                Files.move(temporary, file, StandardCopyOption.ATOMIC_MOVE,
+                        StandardCopyOption.REPLACE_EXISTING);
+            } catch (AtomicMoveNotSupportedException e) {
+                Files.move(temporary, file, StandardCopyOption.REPLACE_EXISTING);
+            }
+        } finally {
+            Files.deleteIfExists(temporary);
         }
     }
 

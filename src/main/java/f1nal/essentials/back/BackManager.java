@@ -51,7 +51,7 @@ public final class BackManager {
     }
 
     public static boolean teleportBack(ServerPlayer player) {
-        Optional<BackEntry> opt = consume(player);
+        Optional<BackEntry> opt = peek(player);
         if (opt.isEmpty()) return false;
         BackEntry e = opt.get();
         MinecraftServer server = player.level().getServer();
@@ -59,6 +59,7 @@ public final class BackManager {
         ServerLevel world = server.getLevel(e.worldKey);
         if (world == null) return false;
         player.teleportTo(world, e.x, e.y, e.z, java.util.Set.of(), e.yaw, e.pitch, false);
+        consume(player);
         return true;
     }
 }
