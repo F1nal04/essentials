@@ -11,6 +11,7 @@ import com.mojang.brigadier.context.CommandContext;
 import f1nal.essentials.Messages;
 import f1nal.essentials.config.CommandConfig;
 import f1nal.essentials.tpa.TpaManager;
+import f1nal.essentials.tpa.TpaRequests;
 import f1nal.essentials.back.BackManager;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandBuildContext;
@@ -83,7 +84,7 @@ public final class TpaCommands {
             return 0;
         }
 
-        boolean created = TpaManager.createRequest(sender, target, TpaManager.Type.TPA);
+        boolean created = TpaManager.createRequest(sender, target, TpaRequests.Type.TPA);
         if (!created) {
             source.sendFailure(Messages.error("You already have a pending request."));
             return 0;
@@ -112,7 +113,7 @@ public final class TpaCommands {
             return 0;
         }
 
-        boolean created = TpaManager.createRequest(sender, target, TpaManager.Type.TPA_HERE);
+        boolean created = TpaManager.createRequest(sender, target, TpaRequests.Type.TPA_HERE);
         if (!created) {
             source.sendFailure(Messages.error("You already have a pending request."));
             return 0;
@@ -145,7 +146,7 @@ public final class TpaCommands {
             source.sendFailure(Messages.error("No other players are online."));
             return 0;
         }
-        int count = TpaManager.createRequests(sender, others, TpaManager.Type.TPA_HERE);
+        int count = TpaManager.createRequests(sender, others, TpaRequests.Type.TPA_HERE);
         if (count < 0) {
             source.sendFailure(Messages.error("You already have a pending request."));
             return 0;
@@ -165,12 +166,12 @@ public final class TpaCommands {
             source.sendFailure(Messages.error("You must be a player to use this command."));
             return 0;
         }
-        Optional<TpaManager.Request> reqOpt = TpaManager.accept(target, from);
+        Optional<TpaRequests.Request> reqOpt = TpaManager.accept(target, from);
         if (reqOpt.isEmpty()) {
             source.sendFailure(Messages.error("No pending request found."));
             return 0;
         }
-        TpaManager.Request req = reqOpt.get();
+        TpaRequests.Request req = reqOpt.get();
         MinecraftServer server = target.level().getServer();
         if (server == null) {
             return 0;
@@ -181,7 +182,7 @@ public final class TpaCommands {
             return 0;
         }
 
-        if (req.type == TpaManager.Type.TPA) {
+        if (req.type == TpaRequests.Type.TPA) {
             // sender -> target
             BackManager.markBackPosition(sender); // record sender's previous position
             sender.teleportTo(target.level(), target.getX(), target.getY(), target.getZ(),
@@ -207,12 +208,12 @@ public final class TpaCommands {
             source.sendFailure(Messages.error("You must be a player to use this command."));
             return 0;
         }
-        Optional<TpaManager.Request> reqOpt = TpaManager.deny(target, from);
+        Optional<TpaRequests.Request> reqOpt = TpaManager.deny(target, from);
         if (reqOpt.isEmpty()) {
             source.sendFailure(Messages.error("No pending request found."));
             return 0;
         }
-        TpaManager.Request req = reqOpt.get();
+        TpaRequests.Request req = reqOpt.get();
         MinecraftServer server = target.level().getServer();
         if (server != null) {
             ServerPlayer sender = server.getPlayerList().getPlayer(req.sender);
