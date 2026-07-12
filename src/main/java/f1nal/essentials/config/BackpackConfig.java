@@ -1,6 +1,5 @@
 package f1nal.essentials.config;
 
-import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -48,9 +47,17 @@ public final class BackpackConfig {
         if (!Files.exists(cfg)) {
             return defaults();
         }
-        try (Reader reader = Files.newBufferedReader(cfg, StandardCharsets.UTF_8)) {
-            Yaml yaml = new Yaml(new LoaderOptions());
-            Object root = yaml.load(reader);
+        try {
+            return parse(Files.readString(cfg, StandardCharsets.UTF_8));
+        } catch (Exception e) {
+            f1nal.essentials.Essentials.LOGGER.warn("Failed to read backpack settings from essentials.yaml, using defaults: {}", e.toString());
+            return defaults();
+        }
+    }
+
+    static BackpackConfig parse(String yamlText) {
+        try {
+            Object root = new Yaml(new LoaderOptions()).load(yamlText);
             if (!(root instanceof Map<?, ?> map)) {
                 return defaults();
             }
