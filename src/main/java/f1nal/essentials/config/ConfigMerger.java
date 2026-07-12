@@ -1,10 +1,15 @@
 package f1nal.essentials.config;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
+import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.Yaml;
 
@@ -71,7 +76,101 @@ public final class ConfigMerger {
             return new Result(Status.NO_CHANGE, null, null, List.of(), List.of(), List.of());
         }
 
-        throw new UnsupportedOperationException("rewrite not implemented yet");
+        List<Entry> reset = new ArrayList<>();
+        String mergedText = rewrite(templateText, templateLeaves, userLeaves, reset);
+        if (mergedText == null) {
+            return new Result(Status.UNSUPPORTED_TEMPLATE,
+                    "bundled default config has a layout the migrator cannot rewrite",
+                    null, added, removed, List.of());
+        }
+        return new Result(Status.MERGED, null, mergedText, added, removed, reset);
+    }
+
+    private static final Pattern KEY_LINE = Pattern.compile("^( *)([A-Za-z0-9_-]+):(.*)$");
+
+    /**
+     * Walks the template line by line so its comments and layout survive,
+     * substituting the user's value on every leaf line whose key path still
+     * exists. Returns null when the template has a layout the walker cannot
+     * prove it handled (the caller then falls back to warn-only).
+     */
+    private static String rewrite(String templateText, Map<String, Object> templateLeaves,
+            Map<String, Object> userLeaves, List<Entry> reset) {
+        StringBuilder out = new StringBuilder();
+        List<String> stack = new ArrayList<>();
+        Set<String> seenLeaves = new HashSet<>();
+
+        for (String line : templateText.split("\n", -1)) {
+            String trimmed = line.trim();
+            if (trimmed.isEmpty() || trimmed.startsWith("#")) {
+                out.append(line).append('\n');
+                continue;
+            }
+            Matcher m = KEY_LINE.matcher(line);
+            if (!m.matches()) {
+                return null;
+            }
+            int indent = m.group(1).length();
+            if (indent % 2 != 0 || indent / 2 > stack.size()) {
+                return null;
+            }
+            while (stack.size() > indent / 2) {
+                stack.remove(stack.size() - 1);
+            }
+            String key = m.group(2);
+            if (m.group(3).isBlank()) {
+                stack.add(key);
+                out.append(line).append('\n');
+                continue;
+            }
+
+            String path = stack.isEmpty() ? key : String.join(".", stack) + "." + key;
+            seenLeaves.add(path);
+            if (userLeaves.containsKey(path)) {
+                String serialized = serializeScalar(userLeaves.get(path));
+                if (serialized == null) {
+                    reset.add(new Entry(path, userLeaves.get(path)));
+                    out.append(line).append('\n');
+                } else {
+                    out.append(" ".repeat(indent)).append(key).append(": ").append(serialized).append('\n');
+                }
+            } else {
+                out.append(line).append('\n');
+            }
+        }
+
+        // If any template leaf never appeared as a substitutable line, the
+        // walker misread the file — refuse rather than silently drop values.
+        if (!seenLeaves.containsAll(templateLeaves.keySet())) {
+            return null;
+        }
+
+        String result = out.toString();
+        // split("\n", -1) turns a trailing newline into an extra empty segment
+        return templateText.endsWith("\n") ? result.substring(0, result.length() - 1) : result;
+    }
+
+    /**
+     * Renders a user value as a single-line YAML scalar that parses back to
+     * the same value. Returns null when that is impossible; the caller keeps
+     * the template default and reports the key as reset.
+     */
+    private static String serializeScalar(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof Boolean || value instanceof Number) {
+            return value.toString();
+        }
+        DumperOptions options = new DumperOptions();
+        options.setWidth(Integer.MAX_VALUE);
+        if (value instanceof String) {
+            options.setDefaultScalarStyle(DumperOptions.ScalarStyle.DOUBLE_QUOTED);
+        } else {
+            options.setDefaultFlowStyle(DumperOptions.FlowStyle.FLOW);
+        }
+        String dumped = new Yaml(options).dump(value).trim();
+        return dumped.contains("\n") ? null : dumped;
     }
 
     /**

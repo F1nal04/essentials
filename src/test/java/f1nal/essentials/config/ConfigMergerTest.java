@@ -82,4 +82,103 @@ class ConfigMergerTest {
         assertEquals(ConfigMerger.Status.UNREADABLE_USER, ConfigMerger.merge(TEMPLATE, "just a string").status());
         assertEquals(ConfigMerger.Status.UNREADABLE_USER, ConfigMerger.merge(TEMPLATE, "").status());
     }
+
+    // ---- rewrite ----
+
+    @Test
+    void addedKeyGetsDefaultAndUserValuesSurvive() {
+        String user = """
+                tag:
+                  text: "MyServer"
+                backpack:
+                  mode: "serverwide"
+                commands:
+                  repair:
+                    enabled: false
+                    access: "all"
+                """;
+        ConfigMerger.Result r = ConfigMerger.merge(TEMPLATE, user);
+        assertEquals(ConfigMerger.Status.MERGED, r.status());
+        assertEquals(1, r.added().size());
+        assertEquals("tag.bold", r.added().get(0).path());
+        assertEquals(true, r.added().get(0).value());
+        assertTrue(r.removed().isEmpty());
+
+        assertEquals("MyServer", at(r.mergedText(), "tag", "text"));
+        assertEquals(true, at(r.mergedText(), "tag", "bold"));
+        assertEquals("serverwide", at(r.mergedText(), "backpack", "mode"));
+        assertEquals(false, at(r.mergedText(), "commands", "repair", "enabled"));
+        assertEquals("all", at(r.mergedText(), "commands", "repair", "access"));
+    }
+
+    @Test
+    void templateCommentsSurviveTheRewrite() {
+        String user = """
+                tag:
+                  text: "MyServer"
+                """;
+        ConfigMerger.Result r = ConfigMerger.merge(TEMPLATE, user);
+        assertEquals(ConfigMerger.Status.MERGED, r.status());
+        assertTrue(r.mergedText().contains("# The chat tag"));
+        assertTrue(r.mergedText().contains("# Mode: per_player | serverwide | ender_chest"));
+    }
+
+    @Test
+    void removedKeyIsDroppedAndReported() {
+        String user = """
+                tag:
+                  text: "Essentials"
+                  bold: true
+                  old_thing: 12
+                backpack:
+                  mode: "per_player"
+                commands:
+                  repair:
+                    enabled: true
+                    access: "op"
+                """;
+        ConfigMerger.Result r = ConfigMerger.merge(TEMPLATE, user);
+        assertEquals(ConfigMerger.Status.MERGED, r.status());
+        assertEquals(1, r.removed().size());
+        assertEquals("tag.old_thing", r.removed().get(0).path());
+        assertEquals(12, r.removed().get(0).value());
+        assertNull(((Map<?, ?>) at(r.mergedText(), "tag")).get("old_thing"));
+    }
+
+    @Test
+    void mapToScalarStructureChangeCountsAsAddAndRemove() {
+        String user = """
+                tag:
+                  text: "Essentials"
+                  bold: true
+                backpack: "simple"
+                commands:
+                  repair:
+                    enabled: true
+                    access: "op"
+                """;
+        ConfigMerger.Result r = ConfigMerger.merge(TEMPLATE, user);
+        assertEquals(ConfigMerger.Status.MERGED, r.status());
+        assertTrue(r.added().stream().anyMatch(e -> e.path().equals("backpack.mode")));
+        assertTrue(r.removed().stream().anyMatch(e -> e.path().equals("backpack")));
+        assertEquals("per_player", at(r.mergedText(), "backpack", "mode"));
+    }
+
+    @Test
+    void trickyStringsRoundTrip() {
+        String user = """
+                tag:
+                  text: "yes"
+                backpack:
+                  mode: "value with # hash"
+                commands:
+                  repair:
+                    enabled: true
+                    access: "op"
+                """;
+        ConfigMerger.Result r = ConfigMerger.merge(TEMPLATE, user);
+        assertEquals(ConfigMerger.Status.MERGED, r.status());
+        assertEquals("yes", at(r.mergedText(), "tag", "text"));
+        assertEquals("value with # hash", at(r.mergedText(), "backpack", "mode"));
+    }
 }
