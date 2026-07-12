@@ -32,6 +32,10 @@ bin/
 
 run/
 
+# minecraft log4j output from unit test runs
+
+logs/
+
 # java
 
 hs_err_*.log
