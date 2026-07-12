@@ -181,4 +181,66 @@ class ConfigMergerTest {
         assertEquals("yes", at(r.mergedText(), "tag", "text"));
         assertEquals("value with # hash", at(r.mergedText(), "backpack", "mode"));
     }
+
+    // ---- safety rails ----
+
+    @Test
+    void blockListInTemplateFallsBackToWarnOnly() {
+        String template = """
+                tag:
+                  text: "Essentials"
+                items:
+                  - one
+                  - two
+                """;
+        String user = """
+                tag:
+                  text: "MyServer"
+                """;
+        ConfigMerger.Result r = ConfigMerger.merge(template, user);
+        assertEquals(ConfigMerger.Status.UNSUPPORTED_TEMPLATE, r.status());
+        assertNull(r.mergedText());
+        assertTrue(r.added().stream().anyMatch(e -> e.path().equals("items")));
+    }
+
+    @Test
+    void nullUserValueIsResetToDefault() {
+        String user = """
+                tag:
+                  text: "MyServer"
+                  bold:
+                backpack:
+                  mode: "per_player"
+                commands:
+                  repair:
+                    enabled: true
+                    access: "op"
+                    stale: 1
+                """;
+        ConfigMerger.Result r = ConfigMerger.merge(TEMPLATE, user);
+        assertEquals(ConfigMerger.Status.MERGED, r.status());
+        assertEquals(true, at(r.mergedText(), "tag", "bold"));
+        assertEquals(1, r.reset().size());
+        assertEquals("tag.bold", r.reset().get(0).path());
+    }
+
+    @Test
+    void flowListUserValueRoundTrips() {
+        String user = """
+                tag:
+                  text: "MyServer"
+                  bold: [1, 2]
+                backpack:
+                  mode: "per_player"
+                commands:
+                  repair:
+                    enabled: true
+                    access: "op"
+                    stale: 1
+                """;
+        ConfigMerger.Result r = ConfigMerger.merge(TEMPLATE, user);
+        assertEquals(ConfigMerger.Status.MERGED, r.status());
+        assertEquals(java.util.List.of(1, 2), at(r.mergedText(), "tag", "bold"));
+        assertTrue(r.reset().isEmpty());
+    }
 }
