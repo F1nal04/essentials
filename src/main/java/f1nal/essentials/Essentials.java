@@ -13,6 +13,7 @@ import f1nal.essentials.command.EnderChestSeeCommand;
 import f1nal.essentials.command.FeedCommand;
 import f1nal.essentials.command.FlightCommand;
 import f1nal.essentials.command.HealCommand;
+import f1nal.essentials.command.InventorySeeCommand;
 import f1nal.essentials.command.RepairCommand;
 import f1nal.essentials.command.TpaCommands;
 import f1nal.essentials.config.CommandConfig;
@@ -100,6 +101,13 @@ public class Essentials implements ModInitializer {
         if (eseeSettings != null && eseeSettings.enabled()) {
             CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment)
                     -> EnderChestSeeCommand.register(dispatcher, registryAccess, environment, eseeSettings)
+            );
+        }
+
+        CommandSettings iseeSettings = commandSettings.get("isee");
+        if (iseeSettings != null && iseeSettings.enabled()) {
+            CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment)
+                    -> InventorySeeCommand.register(dispatcher, registryAccess, environment, iseeSettings)
             );
         }
     }

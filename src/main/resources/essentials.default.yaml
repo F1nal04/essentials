@@ -52,3 +52,6 @@ commands:
   esee:
     enabled: true
     access: "op"
+  isee:
+    enabled: true
+    access: "op"
