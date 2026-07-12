@@ -2,6 +2,7 @@ package f1nal.essentials.backpack;
 
 import f1nal.essentials.Essentials;
 import f1nal.essentials.config.BackpackConfig;
+import f1nal.essentials.config.BackpackConfig.Mode;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
@@ -27,8 +28,10 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Manages backpack inventories with persistent storage. Supports both
- * per-player and serverwide modes.
+ * Manages backpack inventories with persistent storage for the per-player and
+ * serverwide modes. In ender chest mode there is nothing to manage: the
+ * backpack is the player's vanilla ender chest, which Minecraft persists in
+ * player data, so every method here is a no-op.
  */
 public final class BackpackManager {
 
@@ -48,7 +51,7 @@ public final class BackpackManager {
         }
 
         // Load serverwide backpack if in serverwide mode
-        if (!BackpackConfig.get().perPlayer) {
+        if (BackpackConfig.get().mode == Mode.SERVERWIDE) {
             serverwideBackpack = loadServerwideBackpack(server);
         }
     }
@@ -58,7 +61,7 @@ public final class BackpackManager {
      * mode, returns the shared backpack.
      */
     public static SimpleContainer getOrCreateBackpack(UUID playerId, MinecraftServer server) {
-        if (!BackpackConfig.get().perPlayer) {
+        if (BackpackConfig.get().mode == Mode.SERVERWIDE) {
             // Serverwide mode - everyone shares the same backpack
             if (serverwideBackpack == null) {
                 serverwideBackpack = loadServerwideBackpack(server);
@@ -75,12 +78,11 @@ public final class BackpackManager {
      * backpack.
      */
     public static void saveBackpack(UUID playerId, Container inventory, MinecraftServer server) {
-        if (!BackpackConfig.get().perPlayer) {
-            // Save serverwide backpack
-            saveServerwideBackpack(inventory, server);
-        } else {
-            // Save per-player backpack
-            savePlayerBackpack(playerId, inventory, server);
+        switch (BackpackConfig.get().mode) {
+            case SERVERWIDE -> saveServerwideBackpack(inventory, server);
+            case PER_PLAYER -> savePlayerBackpack(playerId, inventory, server);
+            case ENDER_CHEST -> {
+            }
         }
     }
 
@@ -88,13 +90,18 @@ public final class BackpackManager {
      * Saves all backpacks to disk (called on server shutdown).
      */
     public static void saveAll(MinecraftServer server) {
-        if (!BackpackConfig.get().perPlayer) {
-            if (serverwideBackpack != null) {
-                saveServerwideBackpack(serverwideBackpack, server);
+        switch (BackpackConfig.get().mode) {
+            case SERVERWIDE -> {
+                if (serverwideBackpack != null) {
+                    saveServerwideBackpack(serverwideBackpack, server);
+                }
             }
-        } else {
-            for (Map.Entry<UUID, SimpleContainer> entry : playerBackpacks.entrySet()) {
-                savePlayerBackpack(entry.getKey(), entry.getValue(), server);
+            case PER_PLAYER -> {
+                for (Map.Entry<UUID, SimpleContainer> entry : playerBackpacks.entrySet()) {
+                    savePlayerBackpack(entry.getKey(), entry.getValue(), server);
+                }
+            }
+            case ENDER_CHEST -> {
             }
         }
     }
@@ -106,13 +113,20 @@ public final class BackpackManager {
      * the cached container and be lost by evicting it.
      */
     public static void saveAndUnloadPlayer(UUID playerId, MinecraftServer server) {
-        if (BackpackConfig.get().perPlayer) {
-            SimpleContainer inventory = playerBackpacks.remove(playerId);
-            if (inventory != null) {
-                savePlayerBackpack(playerId, inventory, server);
+        switch (BackpackConfig.get().mode) {
+            case PER_PLAYER -> {
+                SimpleContainer inventory = playerBackpacks.remove(playerId);
+                if (inventory != null) {
+                    savePlayerBackpack(playerId, inventory, server);
+                }
             }
-        } else if (serverwideBackpack != null) {
-            saveServerwideBackpack(serverwideBackpack, server);
+            case SERVERWIDE -> {
+                if (serverwideBackpack != null) {
+                    saveServerwideBackpack(serverwideBackpack, server);
+                }
+            }
+            case ENDER_CHEST -> {
+            }
         }
     }
 

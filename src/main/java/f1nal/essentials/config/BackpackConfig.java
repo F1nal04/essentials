@@ -4,6 +4,7 @@ import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Locale;
 import java.util.Map;
 
 import org.yaml.snakeyaml.LoaderOptions;
@@ -13,12 +14,26 @@ import net.fabricmc.loader.api.FabricLoader;
 
 public final class BackpackConfig {
 
+    public enum Mode {
+        PER_PLAYER,
+        SERVERWIDE,
+        ENDER_CHEST;
+
+        static Mode fromString(String value) {
+            return switch (value.toLowerCase(Locale.ROOT)) {
+                case "serverwide" -> SERVERWIDE;
+                case "ender_chest" -> ENDER_CHEST;
+                default -> PER_PLAYER;
+            };
+        }
+    }
+
     private static BackpackConfig INSTANCE = null;
 
-    public final boolean perPlayer;
+    public final Mode mode;
 
-    private BackpackConfig(boolean perPlayer) {
-        this.perPlayer = perPlayer;
+    private BackpackConfig(Mode mode) {
+        this.mode = mode;
     }
 
     public static BackpackConfig get() {
@@ -45,9 +60,8 @@ public final class BackpackConfig {
             }
 
             String mode = backpack.get("mode") instanceof String ? (String) backpack.get("mode") : "per_player";
-            boolean perPlayer = mode.equalsIgnoreCase("per_player");
 
-            return new BackpackConfig(perPlayer);
+            return new BackpackConfig(Mode.fromString(mode));
         } catch (Exception e) {
             f1nal.essentials.Essentials.LOGGER.warn("Failed to read backpack settings from essentials.yaml, using defaults: {}", e.toString());
             return defaults();
@@ -55,6 +69,6 @@ public final class BackpackConfig {
     }
 
     private static BackpackConfig defaults() {
-        return new BackpackConfig(true); // Default to per-player mode
+        return new BackpackConfig(Mode.PER_PLAYER); // Default to per-player mode
     }
 }

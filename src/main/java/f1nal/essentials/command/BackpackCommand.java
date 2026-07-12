@@ -40,7 +40,7 @@ public final class BackpackCommand {
             return 0;
         }
 
-        boolean perPlayer = BackpackConfig.get().perPlayer;
+        boolean perPlayer = BackpackConfig.get().mode == BackpackConfig.Mode.PER_PLAYER;
         String title = perPlayer ? "Backpack" : "Serverwide Backpack";
 
         target.openMenu(new SimpleMenuProvider(
