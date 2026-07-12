@@ -40,7 +40,24 @@ public final class BackpackCommand {
             return 0;
         }
 
-        boolean perPlayer = BackpackConfig.get().mode == BackpackConfig.Mode.PER_PLAYER;
+        BackpackConfig.Mode mode = BackpackConfig.get().mode;
+
+        if (mode == BackpackConfig.Mode.ENDER_CHEST) {
+            // The backpack is the player's vanilla ender chest: same live
+            // container, so vanilla owns persistence and no save is needed.
+            target.openMenu(new SimpleMenuProvider(
+                    (syncId, playerInventory, player) -> ChestMenu.threeRows(syncId, playerInventory, player.getEnderChestInventory()),
+                    Component.literal("Ender Chest")
+            ));
+
+            if (source.getEntity() == target) {
+                source.sendSuccess(() -> Messages.info("Opened your ender chest."), false);
+            }
+
+            return 1;
+        }
+
+        boolean perPlayer = mode == BackpackConfig.Mode.PER_PLAYER;
         String title = perPlayer ? "Backpack" : "Serverwide Backpack";
 
         target.openMenu(new SimpleMenuProvider(
