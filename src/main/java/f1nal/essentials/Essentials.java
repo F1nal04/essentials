@@ -9,6 +9,7 @@ import f1nal.essentials.backpack.BackpackManager;
 import f1nal.essentials.command.BackCommand;
 import f1nal.essentials.command.BackpackCommand;
 import f1nal.essentials.command.DisposalCommand;
+import f1nal.essentials.command.EnderChestSeeCommand;
 import f1nal.essentials.command.FeedCommand;
 import f1nal.essentials.command.FlightCommand;
 import f1nal.essentials.command.HealCommand;
@@ -92,6 +93,13 @@ public class Essentials implements ModInitializer {
         if (backpackSettings != null && backpackSettings.enabled()) {
             CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment)
                     -> BackpackCommand.register(dispatcher, registryAccess, environment, backpackSettings)
+            );
+        }
+
+        CommandSettings eseeSettings = commandSettings.get("esee");
+        if (eseeSettings != null && eseeSettings.enabled()) {
+            CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment)
+                    -> EnderChestSeeCommand.register(dispatcher, registryAccess, environment, eseeSettings)
             );
         }
     }

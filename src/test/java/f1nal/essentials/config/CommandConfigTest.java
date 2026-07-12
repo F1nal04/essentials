@@ -13,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class CommandConfigTest {
 
     private static final java.util.Set<String> KNOWN = java.util.Set.of(
-            "repair", "heal", "feed", "flight", "disposal", "tpa", "back", "backpack");
+            "repair", "heal", "feed", "flight", "disposal", "tpa", "back", "backpack", "esee");
 
     @Test
     void missingSectionGivesAllDefaults() {

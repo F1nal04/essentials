@@ -49,3 +49,6 @@ commands:
   backpack:
     enabled: true
     access: "all"
+  esee:
+    enabled: true
+    access: "op"

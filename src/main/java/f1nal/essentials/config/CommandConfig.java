@@ -70,6 +70,7 @@ public final class CommandConfig {
         defaults.put("tpa", new CommandSettings(true, "all"));
         defaults.put("back", new CommandSettings(true, "all"));
         defaults.put("backpack", new CommandSettings(true, "all"));
+        defaults.put("esee", new CommandSettings(true, "op"));
         return defaults;
     }
 
