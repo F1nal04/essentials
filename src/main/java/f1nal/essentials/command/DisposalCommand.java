@@ -1,7 +1,7 @@
 package f1nal.essentials.command;
 
 import com.mojang.brigadier.CommandDispatcher;
-import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import com.mojang.brigadier.tree.LiteralCommandNode;
 import f1nal.essentials.Messages;
 import f1nal.essentials.config.CommandConfig;
 import net.minecraft.commands.CommandBuildContext;
@@ -21,19 +21,16 @@ public final class DisposalCommand {
     }
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher, CommandBuildContext registryAccess, Commands.CommandSelection environment, CommandConfig.CommandSettings settings) {
-        LiteralArgumentBuilder<CommandSourceStack> disposal = Commands.literal("disposal")
+        LiteralCommandNode<CommandSourceStack> disposal = dispatcher.register(Commands.literal("disposal")
                 .requires(settings.getPermissionRequirement())
-                .executes(ctx -> openDisposal(ctx.getSource(), ctx.getSource().getPlayer()));
-        LiteralArgumentBuilder<CommandSourceStack> trash = Commands.literal("trash")
-                .requires(settings.getPermissionRequirement())
-                .executes(ctx -> openDisposal(ctx.getSource(), ctx.getSource().getPlayer()));
-        LiteralArgumentBuilder<CommandSourceStack> trashcan = Commands.literal("trashcan")
-                .requires(settings.getPermissionRequirement())
-                .executes(ctx -> openDisposal(ctx.getSource(), ctx.getSource().getPlayer()));
+                .executes(ctx -> openDisposal(ctx.getSource(), ctx.getSource().getPlayer())));
 
-        dispatcher.register(disposal);
-        dispatcher.register(trash);
-        dispatcher.register(trashcan);
+        dispatcher.register(Commands.literal("trash")
+                .requires(settings.getPermissionRequirement())
+                .redirect(disposal));
+        dispatcher.register(Commands.literal("trashcan")
+                .requires(settings.getPermissionRequirement())
+                .redirect(disposal));
     }
 
     private static int openDisposal(CommandSourceStack source, ServerPlayer target) {
@@ -82,5 +79,3 @@ public final class DisposalCommand {
         return 1;
     }
 }
-
-

@@ -7,6 +7,7 @@ import java.util.UUID;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import com.mojang.brigadier.tree.LiteralCommandNode;
 
 import f1nal.essentials.Messages;
 import f1nal.essentials.backpack.BackpackManager;
@@ -37,14 +38,16 @@ public final class BackpackSeeCommand {
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher,
             CommandBuildContext registryAccess, Commands.CommandSelection environment,
             CommandConfig.CommandSettings settings) {
-        dispatcher.register(command("backpacksee", settings));
-        dispatcher.register(command("bpsee", settings));
+        LiteralCommandNode<CommandSourceStack> backpackSee = dispatcher.register(
+                command("backpacksee").requires(settings.getPermissionRequirement()));
+
+        dispatcher.register(Commands.literal("bpsee")
+                .requires(settings.getPermissionRequirement())
+                .redirect(backpackSee));
     }
 
-    private static LiteralArgumentBuilder<CommandSourceStack> command(String name,
-            CommandConfig.CommandSettings settings) {
+    private static LiteralArgumentBuilder<CommandSourceStack> command(String name) {
         return Commands.literal(name)
-                .requires(settings.getPermissionRequirement())
                 .then(Commands.argument("player", GameProfileArgument.gameProfile())
                         .executes(ctx -> open(ctx.getSource(),
                                 GameProfileArgument.getGameProfiles(ctx, "player"))));

@@ -1,7 +1,7 @@
 package f1nal.essentials.command;
 
 import com.mojang.brigadier.CommandDispatcher;
-import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import com.mojang.brigadier.tree.LiteralCommandNode;
 import f1nal.essentials.Messages;
 import f1nal.essentials.backpack.BackpackManager;
 import f1nal.essentials.config.BackpackConfig;
@@ -22,16 +22,13 @@ public final class BackpackCommand {
     }
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher, CommandBuildContext registryAccess, Commands.CommandSelection environment, CommandConfig.CommandSettings settings) {
-        LiteralArgumentBuilder<CommandSourceStack> backpack = Commands.literal("backpack")
+        LiteralCommandNode<CommandSourceStack> backpack = dispatcher.register(Commands.literal("backpack")
                 .requires(settings.getPermissionRequirement())
-                .executes(ctx -> openBackpack(ctx.getSource(), ctx.getSource().getPlayer()));
+                .executes(ctx -> openBackpack(ctx.getSource(), ctx.getSource().getPlayer())));
 
-        LiteralArgumentBuilder<CommandSourceStack> bp = Commands.literal("bp")
+        dispatcher.register(Commands.literal("bp")
                 .requires(settings.getPermissionRequirement())
-                .executes(ctx -> openBackpack(ctx.getSource(), ctx.getSource().getPlayer()));
-
-        dispatcher.register(backpack);
-        dispatcher.register(bp);
+                .redirect(backpack));
     }
 
     private static int openBackpack(CommandSourceStack source, ServerPlayer target) {

@@ -6,22 +6,25 @@ Essentials is an SMP toolkit that, in my opinion, provides the essential admin a
 
 ### Available Commands
 
-- `/repair [target]` – Repairs the main-hand item if it is damageable. Op-level permission by default.
-- `/heal [target]` – Restores health, hunger, and saturation to full. Op-level permission by default.
-- `/feed [target]` – Tops off hunger and saturation. Op-level permission by default.
-- `/flight [target]` – Toggles creative-style flight for survival players. Op-level permission by default.
-- `/disposal`, `/trash`, `/trashcan` – Opens a temporary 9x3 inventory for throwing items away. Available to all players by default. The contents are deleted when the screen closes, and the player gets a reminder in chat.
-- `/backpack`, `/bp` – Opens your backpack, a persistent 9x3 storage. Available to all players by default. See the backpack modes below.
-- `/backpacksee <player>` (`/bpsee`) – Opens and edits a player's backpack in per-player mode. Op-level permission by default.
-- `/tpa <player>` – Send a teleport request to another player. Available to all players by default.
-- `/tpahere <player>` – Send a request for another player to teleport to you. Available to all players by default.
-- `/tpahere all` – Send TPAHere requests to all online players. Available to all players by default.
-- `/tpaccept [player]` – Accept a teleport request (the newest one if no player is given). Available to all players by default.
-- `/tpdeny [player]` – Deny a teleport request (the newest one if no player is given). Available to all players by default.
-- `/tpcancel` – Cancel your outgoing teleport requests. Available to all players by default.
-- `/back` – Teleport back to your previous position (works after TPA teleports). Available to all players by default.
-- `/inventorysee <player>` (`/isee`) – Open an online or previously joined player's full inventory (storage, hotbar, armor, offhand) in an editable view. Op-level permission by default.
-- `/enderchestsee <player>` (`/esee`) – Open an online or previously joined player's ender chest in an editable view. Op-level permission by default.
+The primary command is the configured command name. Aliases are shorter alternatives with identical behavior and permissions.
+
+| Primary command | Aliases | Description | Default access |
+| --- | --- | --- | --- |
+| `/repair [target]` | None | Repairs the main-hand item if it is damageable. | Operators |
+| `/heal [target]` | None | Restores health, hunger, and saturation to full. | Operators |
+| `/feed [target]` | None | Tops off hunger and saturation. | Operators |
+| `/flight [target]` | None | Toggles creative-style flight for survival players. | Operators |
+| `/disposal` | `/trash`, `/trashcan` | Opens a temporary 9x3 inventory whose contents are deleted when closed. | Everyone |
+| `/backpack` | `/bp` | Opens your persistent 9x3 backpack. See the backpack modes below. | Everyone |
+| `/backpacksee <player>` | `/bpsee` | Opens and edits an online or previously joined player's backpack in per-player mode. | Operators |
+| `/tpa <player>` | None | Sends a teleport request to another player. | Everyone |
+| `/tpahere <player>` | None | Requests that another player teleport to you. Use `/tpahere all` to request all online players. | Everyone |
+| `/tpaccept [player]` | None | Accepts a teleport request, or the newest request when no player is given. | Everyone |
+| `/tpdeny [player]` | None | Denies a teleport request, or the newest request when no player is given. | Everyone |
+| `/tpcancel` | None | Cancels your outgoing teleport request. | Everyone |
+| `/back` | None | Returns to your previous position after a TPA teleport. | Everyone |
+| `/inventorysee <player>` | `/isee` | Opens and edits an online or previously joined player's inventory. | Operators |
+| `/enderchestsee <player>` | `/esee` | Opens and edits an online or previously joined player's ender chest. | Operators |
 
 `[target]` is optional. Defaults to executor.
 

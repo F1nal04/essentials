@@ -2,6 +2,7 @@ package f1nal.essentials.command;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import com.mojang.brigadier.tree.LiteralCommandNode;
 import f1nal.essentials.Messages;
 import f1nal.essentials.config.CommandConfig;
 import net.minecraft.commands.CommandBuildContext;
@@ -20,13 +21,16 @@ public final class EnderChestSeeCommand {
     }
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher, CommandBuildContext registryAccess, Commands.CommandSelection environment, CommandConfig.CommandSettings settings) {
-        dispatcher.register(command("enderchestsee", settings));
-        dispatcher.register(command("esee", settings));
+        LiteralCommandNode<CommandSourceStack> enderChestSee = dispatcher.register(
+                command("enderchestsee").requires(settings.getPermissionRequirement()));
+
+        dispatcher.register(Commands.literal("esee")
+                .requires(settings.getPermissionRequirement())
+                .redirect(enderChestSee));
     }
 
-    private static LiteralArgumentBuilder<CommandSourceStack> command(String name, CommandConfig.CommandSettings settings) {
+    private static LiteralArgumentBuilder<CommandSourceStack> command(String name) {
         return Commands.literal(name)
-                .requires(settings.getPermissionRequirement())
                 .then(Commands.argument("player", GameProfileArgument.gameProfile())
                         .executes(ctx -> open(ctx.getSource(),
                                 GameProfileArgument.getGameProfiles(ctx, "player"))));

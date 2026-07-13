@@ -2,6 +2,7 @@ package f1nal.essentials.command;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import com.mojang.brigadier.tree.LiteralCommandNode;
 import f1nal.essentials.Messages;
 import f1nal.essentials.config.CommandConfig;
 import net.minecraft.commands.CommandBuildContext;
@@ -27,13 +28,16 @@ public final class InventorySeeCommand {
     }
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher, CommandBuildContext registryAccess, Commands.CommandSelection environment, CommandConfig.CommandSettings settings) {
-        dispatcher.register(command("inventorysee", settings));
-        dispatcher.register(command("isee", settings));
+        LiteralCommandNode<CommandSourceStack> inventorySee = dispatcher.register(
+                command("inventorysee").requires(settings.getPermissionRequirement()));
+
+        dispatcher.register(Commands.literal("isee")
+                .requires(settings.getPermissionRequirement())
+                .redirect(inventorySee));
     }
 
-    private static LiteralArgumentBuilder<CommandSourceStack> command(String name, CommandConfig.CommandSettings settings) {
+    private static LiteralArgumentBuilder<CommandSourceStack> command(String name) {
         return Commands.literal(name)
-                .requires(settings.getPermissionRequirement())
                 .then(Commands.argument("player", GameProfileArgument.gameProfile())
                         .executes(ctx -> open(ctx.getSource(),
                                 GameProfileArgument.getGameProfiles(ctx, "player"))));
