@@ -44,7 +44,11 @@ public final class CommandConfig {
             }
 
             for (Map.Entry<?, ?> entry : commands.entrySet()) {
-                String commandName = entry.getKey().toString();
+                String configuredName = entry.getKey().toString();
+                String commandName = canonicalName(configuredName);
+                if (!configuredName.equals(commandName) && commands.containsKey(commandName)) {
+                    continue;
+                }
                 Object configObj = entry.getValue();
                 if (configObj instanceof Map<?, ?> config) {
                     CommandSettings base = result.getOrDefault(commandName, new CommandSettings(true, "op"));
@@ -70,9 +74,17 @@ public final class CommandConfig {
         defaults.put("tpa", new CommandSettings(true, "all"));
         defaults.put("back", new CommandSettings(true, "all"));
         defaults.put("backpack", new CommandSettings(true, "all"));
-        defaults.put("esee", new CommandSettings(true, "op"));
-        defaults.put("isee", new CommandSettings(true, "op"));
+        defaults.put("enderchestsee", new CommandSettings(true, "op"));
+        defaults.put("inventorysee", new CommandSettings(true, "op"));
         return defaults;
+    }
+
+    private static String canonicalName(String commandName) {
+        return switch (commandName) {
+            case "esee" -> "enderchestsee";
+            case "isee" -> "inventorysee";
+            default -> commandName;
+        };
     }
 
     public record CommandSettings(boolean enabled, String access) {

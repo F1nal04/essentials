@@ -97,17 +97,17 @@ public class Essentials implements ModInitializer {
             );
         }
 
-        CommandSettings eseeSettings = commandSettings.get("esee");
-        if (eseeSettings != null && eseeSettings.enabled()) {
+        CommandSettings enderChestSeeSettings = commandSettings.get("enderchestsee");
+        if (enderChestSeeSettings != null && enderChestSeeSettings.enabled()) {
             CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment)
-                    -> EnderChestSeeCommand.register(dispatcher, registryAccess, environment, eseeSettings)
+                    -> EnderChestSeeCommand.register(dispatcher, registryAccess, environment, enderChestSeeSettings)
             );
         }
 
-        CommandSettings iseeSettings = commandSettings.get("isee");
-        if (iseeSettings != null && iseeSettings.enabled()) {
+        CommandSettings inventorySeeSettings = commandSettings.get("inventorysee");
+        if (inventorySeeSettings != null && inventorySeeSettings.enabled()) {
             CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment)
-                    -> InventorySeeCommand.register(dispatcher, registryAccess, environment, iseeSettings)
+                    -> InventorySeeCommand.register(dispatcher, registryAccess, environment, inventorySeeSettings)
             );
         }
     }
@@ -121,6 +121,7 @@ public class Essentials implements ModInitializer {
         // Save all backpacks when server stops
         ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
             BackpackManager.saveAll(server);
+            f1nal.essentials.command.OfflinePlayerDataManager.finishAll();
         });
 
         // Save and drop a player's cached backpack when they disconnect.
@@ -129,6 +130,7 @@ public class Essentials implements ModInitializer {
         // its menu-close save.
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
             BackpackManager.saveAndUnloadPlayer(handler.getPlayer().getUUID(), server);
+            f1nal.essentials.command.OfflinePlayerDataManager.finishForViewer(handler.getPlayer().getUUID());
         });
     }
 }

@@ -243,4 +243,33 @@ class ConfigMergerTest {
         assertEquals(java.util.List.of(1, 2), at(r.mergedText(), "tag", "bold"));
         assertTrue(r.reset().isEmpty());
     }
+
+    @Test
+    void renamedSeeCommandsKeepLegacySettings() {
+        String template = """
+                commands:
+                  inventorysee:
+                    enabled: true
+                    access: "op"
+                  enderchestsee:
+                    enabled: true
+                    access: "op"
+                """;
+        String user = """
+                commands:
+                  isee:
+                    enabled: false
+                    access: "all"
+                  esee:
+                    enabled: true
+                    access: "all"
+                """;
+
+        ConfigMerger.Result r = ConfigMerger.merge(template, user);
+
+        assertEquals(ConfigMerger.Status.MERGED, r.status());
+        assertEquals(false, at(r.mergedText(), "commands", "inventorysee", "enabled"));
+        assertEquals("all", at(r.mergedText(), "commands", "inventorysee", "access"));
+        assertEquals("all", at(r.mergedText(), "commands", "enderchestsee", "access"));
+    }
 }

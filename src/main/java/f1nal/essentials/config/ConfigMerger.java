@@ -59,6 +59,9 @@ public final class ConfigMerger {
                     null, List.of(), List.of(), List.of());
         }
 
+        carryRenamedCommand(userLeaves, "isee", "inventorysee");
+        carryRenamedCommand(userLeaves, "esee", "enderchestsee");
+
         List<Entry> added = new ArrayList<>();
         for (Map.Entry<String, Object> e : templateLeaves.entrySet()) {
             if (!userLeaves.containsKey(e.getKey())) {
@@ -84,6 +87,16 @@ public final class ConfigMerger {
                     null, added, removed, List.of());
         }
         return new Result(Status.MERGED, null, mergedText, added, removed, reset);
+    }
+
+    private static void carryRenamedCommand(Map<String, Object> leaves, String oldName, String newName) {
+        for (String field : List.of("enabled", "access")) {
+            String oldPath = "commands." + oldName + "." + field;
+            String newPath = "commands." + newName + "." + field;
+            if (!leaves.containsKey(newPath) && leaves.containsKey(oldPath)) {
+                leaves.put(newPath, leaves.get(oldPath));
+            }
+        }
     }
 
     private static final Pattern KEY_LINE = Pattern.compile("^( *)([A-Za-z0-9_-]+):(.*)$");

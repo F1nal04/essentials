@@ -7,7 +7,7 @@ import f1nal.essentials.config.CommandConfig;
 import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
-import net.minecraft.commands.arguments.EntityArgument;
+import net.minecraft.commands.arguments.GameProfileArgument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
@@ -27,24 +27,64 @@ public final class InventorySeeCommand {
     }
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher, CommandBuildContext registryAccess, Commands.CommandSelection environment, CommandConfig.CommandSettings settings) {
-        LiteralArgumentBuilder<CommandSourceStack> isee = Commands.literal("isee")
-                .requires(settings.getPermissionRequirement())
-                .then(Commands.argument("player", EntityArgument.player())
-                        .executes(ctx -> open(ctx.getSource(), EntityArgument.getPlayer(ctx, "player"))));
-
-        dispatcher.register(isee);
+        dispatcher.register(command("inventorysee", settings));
+        dispatcher.register(command("isee", settings));
     }
 
-    private static int open(CommandSourceStack source, ServerPlayer target) {
+    private static LiteralArgumentBuilder<CommandSourceStack> command(String name, CommandConfig.CommandSettings settings) {
+        return Commands.literal(name)
+                .requires(settings.getPermissionRequirement())
+                .then(Commands.argument("player", GameProfileArgument.gameProfile())
+                        .executes(ctx -> open(ctx.getSource(),
+                                GameProfileArgument.getGameProfiles(ctx, "player"))));
+    }
+
+    private static int open(CommandSourceStack source,
+            java.util.Collection<net.minecraft.server.players.NameAndId> targets) {
         ServerPlayer viewer = source.getPlayer();
         if (viewer == null) {
             source.sendFailure(Messages.error("You must be a player to use this command."));
             return 0;
         }
 
+        if (targets.size() != 1) {
+            source.sendFailure(Messages.error("Please specify exactly one player."));
+            return 0;
+        }
+
+        net.minecraft.server.players.NameAndId profile = targets.iterator().next();
+        ServerPlayer target = source.getServer().getPlayerList().getPlayer(profile.id());
+        if (target != null) {
+            return openOnline(source, viewer, target);
+        }
+
+        OfflinePlayerDataManager.AcquireResult result = OfflinePlayerDataManager.acquire(
+                source.getServer(), profile, viewer.getUUID());
+        if (result.status() == OfflinePlayerDataManager.AcquireStatus.NOT_FOUND) {
+            source.sendFailure(Messages.error(profile.name() + " has never joined this server."));
+            return 0;
+        }
+        if (result.status() == OfflinePlayerDataManager.AcquireStatus.BUSY) {
+            source.sendFailure(Messages.error("That player inventory is already being edited."));
+            return 0;
+        }
+
+        OfflinePlayerDataManager.Session session = result.session();
+        viewer.openMenu(new SimpleMenuProvider(
+                (syncId, playerInventory, player) -> new InventoryViewMenu(syncId, playerInventory,
+                        session.inventory(), null, session::isStillOffline, session::finish),
+                Component.literal(profile.name() + "'s Inventory")
+        ));
+        source.sendSuccess(() -> Messages.info("Viewing " + profile.name() + "'s inventory."), false);
+        return 1;
+    }
+
+    private static int openOnline(CommandSourceStack source, ServerPlayer viewer, ServerPlayer target) {
         String name = target.getName().getString();
         viewer.openMenu(new SimpleMenuProvider(
-                (syncId, playerInventory, player) -> new InventoryViewMenu(syncId, playerInventory, target),
+                (syncId, playerInventory, player) -> new InventoryViewMenu(syncId, playerInventory,
+                        target.getInventory(), target,
+                        () -> !target.hasDisconnected() && !target.isRemoved(), () -> { }),
                 Component.literal(name + "'s Inventory")
         ));
 
@@ -62,13 +102,15 @@ public final class InventorySeeCommand {
 
         private static final int VIEW_SLOTS = InventoryViewLayout.VIEW_SIZE;
 
-        private final ServerPlayer target;
+        private final java.util.function.BooleanSupplier validity;
+        private final Runnable onClose;
 
-        InventoryViewMenu(int syncId, Inventory viewerInventory, ServerPlayer target) {
+        InventoryViewMenu(int syncId, Inventory viewerInventory, Container targetInventory,
+                ServerPlayer target, java.util.function.BooleanSupplier validity, Runnable onClose) {
             super(MenuType.GENERIC_9x5, syncId);
-            this.target = target;
+            this.validity = validity;
+            this.onClose = onClose;
 
-            Inventory targetInventory = target.getInventory();
             Container fillers = new SimpleContainer(4);
 
             for (int view = 0; view < VIEW_SLOTS; view++) {
@@ -104,9 +146,13 @@ public final class InventorySeeCommand {
 
         @Override
         public boolean stillValid(Player player) {
-            // Auto-close when the target logs out; the default check would
-            // reject a viewer who doesn't own the inventory.
-            return !target.hasDisconnected() && !target.isRemoved();
+            return validity.getAsBoolean();
+        }
+
+        @Override
+        public void removed(Player player) {
+            super.removed(player);
+            onClose.run();
         }
 
         @Override
@@ -163,7 +209,12 @@ public final class InventorySeeCommand {
 
             @Override
             public boolean mayPlace(ItemStack stack) {
-                return target.isEquippableInSlot(stack, equipmentSlot);
+                if (target != null) {
+                    return target.isEquippableInSlot(stack, equipmentSlot);
+                }
+                net.minecraft.world.item.equipment.Equippable equippable =
+                        stack.get(net.minecraft.core.component.DataComponents.EQUIPPABLE);
+                return equippable != null && equippable.slot() == equipmentSlot;
             }
         }
     }

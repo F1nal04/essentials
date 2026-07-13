@@ -13,7 +13,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class CommandConfigTest {
 
     private static final java.util.Set<String> KNOWN = java.util.Set.of(
-            "repair", "heal", "feed", "flight", "disposal", "tpa", "back", "backpack", "esee", "isee");
+            "repair", "heal", "feed", "flight", "disposal", "tpa", "back", "backpack",
+            "enderchestsee", "inventorysee");
 
     @Test
     void missingSectionGivesAllDefaults() {
@@ -55,5 +56,19 @@ class CommandConfigTest {
         Map<String, CommandSettings> m = CommandConfig.parse("{{{ not yaml");
         assertTrue(m.keySet().containsAll(KNOWN));
         assertEquals(new CommandSettings(true, "all"), m.get("disposal"));
+    }
+
+    @Test
+    void legacySeeCommandKeysConfigureRenamedCommands() {
+        Map<String, CommandSettings> m = CommandConfig.parse("""
+                commands:
+                  isee:
+                    enabled: false
+                    access: "all"
+                  esee:
+                    access: "all"
+                """);
+        assertEquals(new CommandSettings(false, "all"), m.get("inventorysee"));
+        assertEquals(new CommandSettings(true, "all"), m.get("enderchestsee"));
     }
 }

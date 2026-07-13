@@ -1,7 +1,7 @@
 package f1nal.essentials.command;
 
 /**
- * Maps the 45 view slots of the /isee chest UI onto player inventory slot
+ * Maps the 45 view slots of the /inventorysee chest UI onto player inventory slot
  * indices. Pure JVM (no Minecraft imports) so it stays unit testable.
  *
  * View layout: rows 1-3 = main storage (inventory 9-35), row 4 = hotbar

@@ -19,8 +19,8 @@ Essentials is an SMP toolkit that, in my opinion, provides the essential admin a
 - `/tpdeny [player]` – Deny a teleport request (the newest one if no player is given). Available to all players by default.
 - `/tpcancel` – Cancel your outgoing teleport requests. Available to all players by default.
 - `/back` – Teleport back to your previous position (works after TPA teleports). Available to all players by default.
-- `/isee <player>` – Open another player's full inventory (storage, hotbar, armor, offhand) in a live, editable view. Op-level permission by default.
-- `/esee <player>` – Open another player's ender chest in a live, editable view. Op-level permission by default.
+- `/inventorysee <player>` (`/isee`) – Open an online or previously joined player's full inventory (storage, hotbar, armor, offhand) in an editable view. Op-level permission by default.
+- `/enderchestsee <player>` (`/esee`) – Open an online or previously joined player's ender chest in an editable view. Op-level permission by default.
 
 `[target]` is optional. Defaults to executor.
 
@@ -41,7 +41,7 @@ The backpack has three modes, set via `backpack.mode` in the config:
 - **Automatic Config Migration**: When a mod update changes the config schema, your `essentials.yaml` is migrated automatically — your settings are kept, new options are added with defaults, the old file is backed up to `essentials.yaml.bak`, and a startup log warning lists exactly what changed
 - **TPA System**: Full teleport request system with configurable timeouts, cooldowns, and smart request management
 - **Back Command**: Return to your previous position after TPA teleports with a configurable time window
-- **Admin Inventory Views**: `/isee` and `/esee` give operators live, editable views into players' inventories and ender chests
+- **Admin Inventory Views**: `/inventorysee` and `/enderchestsee` give operators editable views into online and offline players' inventories and ender chests
 
 ## Installation (Fabric)
 
