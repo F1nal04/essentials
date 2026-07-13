@@ -49,6 +49,9 @@ commands:
   backpack:
     enabled: true
     access: "all"
+  backpacksee:
+    enabled: true
+    access: "op"
   enderchestsee:
     enabled: true
     access: "op"

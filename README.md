@@ -12,6 +12,7 @@ Essentials is an SMP toolkit that, in my opinion, provides the essential admin a
 - `/flight [target]` – Toggles creative-style flight for survival players. Op-level permission by default.
 - `/disposal`, `/trash`, `/trashcan` – Opens a temporary 9x3 inventory for throwing items away. Available to all players by default. The contents are deleted when the screen closes, and the player gets a reminder in chat.
 - `/backpack`, `/bp` – Opens your backpack, a persistent 9x3 storage. Available to all players by default. See the backpack modes below.
+- `/backpacksee <player>` (`/bpsee`) – Opens and edits a player's backpack in per-player mode. Op-level permission by default.
 - `/tpa <player>` – Send a teleport request to another player. Available to all players by default.
 - `/tpahere <player>` – Send a request for another player to teleport to you. Available to all players by default.
 - `/tpahere all` – Send TPAHere requests to all online players. Available to all players by default.

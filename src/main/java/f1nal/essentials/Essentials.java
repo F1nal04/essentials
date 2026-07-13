@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import f1nal.essentials.backpack.BackpackManager;
 import f1nal.essentials.command.BackCommand;
 import f1nal.essentials.command.BackpackCommand;
+import f1nal.essentials.command.BackpackSeeCommand;
 import f1nal.essentials.command.DisposalCommand;
 import f1nal.essentials.command.EnderChestSeeCommand;
 import f1nal.essentials.command.FeedCommand;
@@ -97,6 +98,13 @@ public class Essentials implements ModInitializer {
             );
         }
 
+        CommandSettings backpackSeeSettings = commandSettings.get("backpacksee");
+        if (backpackSeeSettings != null && backpackSeeSettings.enabled()) {
+            CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment)
+                    -> BackpackSeeCommand.register(dispatcher, registryAccess, environment, backpackSeeSettings)
+            );
+        }
+
         CommandSettings enderChestSeeSettings = commandSettings.get("enderchestsee");
         if (enderChestSeeSettings != null && enderChestSeeSettings.enabled()) {
             CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment)
@@ -120,6 +128,7 @@ public class Essentials implements ModInitializer {
 
         // Save all backpacks when server stops
         ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
+            BackpackSeeCommand.finishAll();
             BackpackManager.saveAll(server);
             f1nal.essentials.command.OfflinePlayerDataManager.finishAll();
         });
@@ -129,8 +138,15 @@ public class Essentials implements ModInitializer {
         // disconnect, so a backpack still open at that moment never gets
         // its menu-close save.
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
-            BackpackManager.saveAndUnloadPlayer(handler.getPlayer().getUUID(), server);
-            f1nal.essentials.command.OfflinePlayerDataManager.finishForViewer(handler.getPlayer().getUUID());
+            java.util.UUID playerId = handler.getPlayer().getUUID();
+            BackpackSeeCommand.finishForViewer(playerId);
+            if (BackpackSeeCommand.isTargetBeingViewed(playerId)) {
+                BackpackManager.saveBackpack(playerId,
+                        BackpackManager.getOrCreateBackpack(playerId, server), server);
+            } else {
+                BackpackManager.saveAndUnloadPlayer(playerId, server);
+            }
+            f1nal.essentials.command.OfflinePlayerDataManager.finishForViewer(playerId);
         });
     }
 }
