@@ -5,10 +5,12 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.tree.LiteralCommandNode;
 import f1nal.essentials.Messages;
 import f1nal.essentials.config.CommandConfig;
+import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.GameProfileArgument;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
@@ -20,7 +22,9 @@ import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 
 public final class InventorySeeCommand {
 
@@ -97,10 +101,10 @@ public final class InventorySeeCommand {
     }
 
     /**
-     * 9x5 chest-shaped menu over another player's live inventory, laid out
-     * per {@link InventoryViewLayout}: main storage, hotbar, then armor,
-     * offhand, and four locked fillers. Real slots edit the target's
-     * inventory directly; vanilla live-syncs both sides every tick.
+     * 9x6 chest-shaped menu over another player's inventory, laid out per
+     * {@link InventoryViewLayout}: main storage, border, hotbar, then armor
+     * and offhand. Real slots edit the target's inventory directly; vanilla
+     * live-syncs both sides every tick for online targets.
      */
     static final class InventoryViewMenu extends AbstractContainerMenu {
 
@@ -111,19 +115,20 @@ public final class InventorySeeCommand {
 
         InventoryViewMenu(int syncId, Inventory viewerInventory, Container targetInventory,
                 ServerPlayer target, java.util.function.BooleanSupplier validity, Runnable onClose) {
-            super(MenuType.GENERIC_9x5, syncId);
+            super(MenuType.GENERIC_9x6, syncId);
             this.validity = validity;
             this.onClose = onClose;
 
-            Container fillers = new SimpleContainer(4);
+            SimpleContainer fillers = new SimpleContainer(VIEW_SLOTS);
 
             for (int view = 0; view < VIEW_SLOTS; view++) {
                 int x = 8 + (view % 9) * 18;
                 int y = 18 + (view / 9) * 18;
                 int invIndex = InventoryViewLayout.mapSlot(view);
                 if (invIndex == InventoryViewLayout.LOCKED) {
-                    addSlot(new LockedSlot(fillers, view - 41, x, y));
-                } else if (view >= 36 && view < 40) {
+                    fillers.setItem(view, borderItem(view));
+                    addSlot(new LockedSlot(fillers, view, x, y));
+                } else if (view >= 45 && view < 49) {
                     EquipmentSlot equipmentSlot = switch (invIndex) {
                         case 39 -> EquipmentSlot.HEAD;
                         case 38 -> EquipmentSlot.CHEST;
@@ -140,12 +145,23 @@ public final class InventorySeeCommand {
 
             for (int row = 0; row < 3; row++) {
                 for (int col = 0; col < 9; col++) {
-                    addSlot(new Slot(viewerInventory, col + row * 9 + 9, 8 + col * 18, 121 + row * 18));
+                    addSlot(new Slot(viewerInventory, col + row * 9 + 9, 8 + col * 18, 139 + row * 18));
                 }
             }
             for (int col = 0; col < 9; col++) {
-                addSlot(new Slot(viewerInventory, col, 8 + col * 18, 179));
+                addSlot(new Slot(viewerInventory, col, 8 + col * 18, 197));
             }
+        }
+
+        private static ItemStack borderItem(int view) {
+            ItemStack border = new ItemStack(Items.STAINED_GLASS_PANE.pick(
+                    view < 36 ? DyeColor.BLACK : DyeColor.GRAY));
+            String label = view < 36
+                    ? "Main Inventory ↑  •  Hotbar ↓"
+                    : "← Armor  •  Off-Hand →";
+            border.set(DataComponents.CUSTOM_NAME,
+                    Component.literal(label).withStyle(ChatFormatting.GRAY));
+            return border;
         }
 
         @Override
@@ -196,6 +212,11 @@ public final class InventorySeeCommand {
             @Override
             public boolean mayPickup(Player player) {
                 return false;
+            }
+
+            @Override
+            public ItemStack safeClone(Player player) {
+                return ItemStack.EMPTY;
             }
         }
 
