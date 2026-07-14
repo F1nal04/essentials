@@ -24,6 +24,7 @@ import net.minecraft.server.players.NameAndId;
 import net.minecraft.util.Util;
 import net.minecraft.world.ItemStackWithSlot;
 import net.minecraft.world.SimpleContainer;
+import net.minecraft.world.entity.EntityEquipment;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.storage.LevelResource;
@@ -95,6 +96,7 @@ public final class OfflinePlayerDataManager {
             this.viewerId = viewerId;
             this.playerData = playerData;
             loadContainer(inventory, playerData, "Inventory", server.registryAccess());
+            loadEquipment(inventory, playerData, server.registryAccess());
             loadContainer(enderChest, playerData, "EnderItems", server.registryAccess());
         }
 
@@ -124,8 +126,11 @@ public final class OfflinePlayerDataManager {
                 return;
             }
 
-            saveContainer(inventory, playerData, "Inventory", server.registryAccess());
-            saveContainer(enderChest, playerData, "EnderItems", server.registryAccess());
+            saveContainer(inventory, playerData, "Inventory", Inventory.INVENTORY_SIZE,
+                    server.registryAccess());
+            saveEquipment(inventory, playerData, server.registryAccess());
+            saveContainer(enderChest, playerData, "EnderItems", enderChest.getContainerSize(),
+                    server.registryAccess());
             savePlayerData();
         }
 
@@ -181,10 +186,10 @@ public final class OfflinePlayerDataManager {
     }
 
     private static void saveContainer(SimpleContainer container, net.minecraft.nbt.CompoundTag data,
-            String key, RegistryAccess registries) {
+            String key, int savedSlots, RegistryAccess registries) {
         RegistryOps<Tag> ops = RegistryOps.create(NbtOps.INSTANCE, registries);
         List<ItemStackWithSlot> items = new ArrayList<>();
-        for (int slot = 0; slot < container.getContainerSize(); slot++) {
+        for (int slot = 0; slot < savedSlots; slot++) {
             ItemStack stack = container.getItem(slot);
             if (!stack.isEmpty()) {
                 items.add(new ItemStackWithSlot(slot, stack));
@@ -194,5 +199,40 @@ public final class OfflinePlayerDataManager {
         encoded.error().ifPresent(error -> Essentials.LOGGER.warn(
                 "Failed to encode offline player {}: {}", key, error.message()));
         encoded.result().ifPresent(tag -> data.put(key, tag));
+    }
+
+    private static void loadEquipment(SimpleContainer inventory, net.minecraft.nbt.CompoundTag data,
+            RegistryAccess registries) {
+        Tag encoded = data.get("equipment");
+        if (encoded == null) {
+            return;
+        }
+
+        RegistryOps<Tag> ops = RegistryOps.create(NbtOps.INSTANCE, registries);
+        DataResult<EntityEquipment> decoded = EntityEquipment.CODEC.parse(ops, encoded);
+        decoded.error().ifPresent(error -> Essentials.LOGGER.warn(
+                "Failed to decode offline player equipment: {}", error.message()));
+        decoded.result().ifPresent(equipment -> Inventory.EQUIPMENT_SLOT_MAPPING.forEach(
+                (slot, equipmentSlot) -> inventory.setItem(slot, equipment.get(equipmentSlot))));
+    }
+
+    private static void saveEquipment(SimpleContainer inventory, net.minecraft.nbt.CompoundTag data,
+            RegistryAccess registries) {
+        RegistryOps<Tag> ops = RegistryOps.create(NbtOps.INSTANCE, registries);
+        EntityEquipment equipment = data.read("equipment", EntityEquipment.CODEC, ops)
+                .orElseGet(EntityEquipment::new);
+
+        Inventory.EQUIPMENT_SLOT_MAPPING.forEach(
+                (slot, equipmentSlot) -> equipment.set(equipmentSlot, inventory.getItem(slot)));
+
+        if (equipment.isEmpty()) {
+            data.remove("equipment");
+            return;
+        }
+
+        DataResult<Tag> encoded = EntityEquipment.CODEC.encodeStart(ops, equipment);
+        encoded.error().ifPresent(error -> Essentials.LOGGER.warn(
+                "Failed to encode offline player equipment: {}", error.message()));
+        encoded.result().ifPresent(tag -> data.put("equipment", tag));
     }
 }

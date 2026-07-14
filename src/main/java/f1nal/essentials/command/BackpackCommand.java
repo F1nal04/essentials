@@ -28,6 +28,7 @@ public final class BackpackCommand {
 
         dispatcher.register(Commands.literal("bp")
                 .requires(settings.getPermissionRequirement())
+                .executes(backpack.getCommand())
                 .redirect(backpack));
     }
 

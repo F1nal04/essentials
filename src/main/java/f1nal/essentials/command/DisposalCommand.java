@@ -27,9 +27,11 @@ public final class DisposalCommand {
 
         dispatcher.register(Commands.literal("trash")
                 .requires(settings.getPermissionRequirement())
+                .executes(disposal.getCommand())
                 .redirect(disposal));
         dispatcher.register(Commands.literal("trashcan")
                 .requires(settings.getPermissionRequirement())
+                .executes(disposal.getCommand())
                 .redirect(disposal));
     }
 
