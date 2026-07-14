@@ -1,0 +1,41 @@
+name: Internal technical exploration
+description: Investigate an architectural or implementation decision
+title: "[Research]: "
+labels:
+  - research
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for internal investigation before implementation. Focus on
+        the decision to make, the boundaries of the investigation, and its deliverable.
+
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: State the technical question or decision this exploration should resolve.
+      placeholder: Determine whether the project should adopt...
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: List the approaches, constraints, risks, and migration concerns to investigate.
+      placeholder: |
+        - Identify the affected components and data.
+        - Compare viable approaches and trade-offs.
+        - Consider migration, reliability, and operational complexity.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-outcome
+    attributes:
+      label: Expected outcome
+      description: Define the recommendation, design, or follow-up work this investigation should produce.
+      placeholder: Document a recommendation, proposed implementation approach, risks, and follow-up issues.
+    validations:
+      required: true

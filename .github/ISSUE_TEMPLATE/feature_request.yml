@@ -1,0 +1,64 @@
+name: Feature request
+description: Propose a user-facing feature or command
+title: "[Feature]: "
+labels:
+  - feature
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting an improvement. Describe the desired outcome and
+        observable behavior so the request can be implemented and verified.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: Briefly describe the feature and the problem it solves.
+      placeholder: Add a command that allows authorized moderators to...
+    validations:
+      required: true
+
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Behavior
+      description: Describe what users can do and what they should observe.
+      placeholder: |
+        - Accept a target player and a reason.
+        - Show clear feedback when the command cannot be completed.
+    validations:
+      required: true
+
+  - type: textarea
+    id: configuration
+    attributes:
+      label: Configuration
+      description: List configuration options, defaults, and message placeholders. Enter "None" if not applicable.
+      placeholder: |
+        - Enable or disable the feature.
+        - Configure messages and placeholders.
+    validations:
+      required: true
+
+  - type: textarea
+    id: permissions
+    attributes:
+      label: Permissions
+      description: Define who can use the feature and the default access level. Enter "None" if not applicable.
+      placeholder: "Default: OP"
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Acceptance criteria
+      description: Add testable conditions that must be true for this request to be complete.
+      placeholder: |
+        - [ ] An authorized user can use the feature successfully.
+        - [ ] Invalid input produces clear feedback.
+        - [ ] Unauthorized users cannot use the feature.
+        - [ ] Disabling the feature prevents it from being used.
+    validations:
+      required: true
