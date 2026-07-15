@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import f1nal.essentials.backpack.BackpackManager;
 import f1nal.essentials.command.BackCommand;
 import f1nal.essentials.command.BanCommand;
+import f1nal.essentials.command.BanIpCommand;
 import f1nal.essentials.command.BackpackCommand;
 import f1nal.essentials.command.BackpackSeeCommand;
 import f1nal.essentials.command.DisposalCommand;
@@ -24,6 +25,8 @@ import f1nal.essentials.config.CommandConfig;
 import f1nal.essentials.config.CommandConfig.CommandSettings;
 import f1nal.essentials.config.ConfigMigrator;
 import f1nal.essentials.moderation.ModerationManager;
+import f1nal.essentials.mixin.ServerCommonPacketListenerAccessor;
+import f1nal.essentials.moderation.IpAddressUtil;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
@@ -131,6 +134,13 @@ public class Essentials implements ModInitializer {
             );
         }
 
+        CommandSettings banIpSettings = commandSettings.get("banip");
+        if (banIpSettings != null && banIpSettings.enabled()) {
+            CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment)
+                    -> BanIpCommand.register(dispatcher, registryAccess, environment, banIpSettings)
+            );
+        }
+
         CommandSettings kickSettings = commandSettings.get("kick");
         if (kickSettings != null && kickSettings.enabled()) {
             CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment)
@@ -175,12 +185,21 @@ public class Essentials implements ModInitializer {
         // Netty's event loop.
         ServerConfigurationConnectionEvents.BEFORE_CONFIGURE.register((handler, server) -> {
             java.util.UUID playerId = handler.getOwner().id();
-            if (playerId == null) {
-                return;
-            }
-            ModerationManager.activeBan(playerId).ifPresent(ban ->
+            if (playerId != null) {
+                var accountBan = ModerationManager.activeBan(playerId);
+                if (accountBan.isPresent()) {
                     handler.disconnect(f1nal.essentials.moderation.ModerationMessages.banDisconnect(
-                            ban, ModerationManager.get().nowMs())));
+                            accountBan.get(), ModerationManager.get().nowMs()));
+                    return;
+                }
+            }
+            var connection = ((ServerCommonPacketListenerAccessor) handler)
+                    .essentials$getConnection();
+            IpAddressUtil.fromSocketAddress(connection.getRemoteAddress())
+                    .flatMap(ModerationManager::activeIpBan)
+                    .ifPresent(ban -> handler.disconnect(
+                            f1nal.essentials.moderation.ModerationMessages.ipBanDisconnect(
+                                    ban, ModerationManager.get().nowMs())));
         });
 
         // Save and drop a player's cached backpack when they disconnect.

@@ -14,6 +14,12 @@ public final class ModerationMessages {
         return LegacyTextFormatter.parse(message);
     }
 
+    public static Component ipBanDisconnect(IpBanRecord ban, long nowMs) {
+        String message = ModerationMessageFormatter.ipBanMessage(
+                ModerationConfig.get().banMessage, ban, nowMs);
+        return LegacyTextFormatter.parse(message);
+    }
+
     public static Component kickDisconnect(String targetName, String reason, Moderator moderator) {
         String message = ModerationMessageFormatter.kickMessage(
                 ModerationConfig.get().kickMessage, targetName, reason, moderator.name());

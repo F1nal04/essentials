@@ -15,10 +15,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-/** Owns the single SQLite connection and all moderation schema migrations. */
+/** Owns the single SQLite connection and the current moderation schema. */
 public final class ModerationDatabase implements AutoCloseable {
-
-    private static final int CURRENT_SCHEMA_VERSION = 2;
 
     private final Connection connection;
     private final Clock clock;
@@ -40,7 +38,7 @@ public final class ModerationDatabase implements AutoCloseable {
         ModerationDatabase database = new ModerationDatabase(connection, clock);
         try {
             database.configure();
-            database.migrate();
+            database.initializeSchema();
             return database;
         } catch (SQLException | RuntimeException e) {
             try {
@@ -61,107 +59,90 @@ public final class ModerationDatabase implements AutoCloseable {
         }
     }
 
-    private void migrate() throws SQLException {
-        int version = currentSchemaVersion();
-        if (version > CURRENT_SCHEMA_VERSION) {
-            throw new SQLException("Database schema version " + version
-                    + " is newer than this mod supports (" + CURRENT_SCHEMA_VERSION + ")");
-        }
-        if (version == 0) {
-            inTransaction(() -> {
-                try (Statement statement = connection.createStatement()) {
-                    statement.execute("""
-                            CREATE TABLE schema_migrations (
-                                version INTEGER PRIMARY KEY,
-                                applied_at_ms INTEGER NOT NULL
-                            )
-                            """);
-                    statement.execute("""
-                            CREATE TABLE bans (
-                                id INTEGER PRIMARY KEY,
-                                target_uuid TEXT NOT NULL,
-                                target_name TEXT NOT NULL,
-                                reason TEXT NOT NULL,
-                                issued_at_ms INTEGER NOT NULL,
-                                expires_at_ms INTEGER NOT NULL,
-                                moderator_uuid TEXT,
-                                moderator_name TEXT NOT NULL,
-                                state TEXT NOT NULL DEFAULT 'ACTIVE'
-                                    CHECK (state IN ('ACTIVE', 'EXPIRED', 'REVOKED')),
-                                revoked_at_ms INTEGER,
-                                revoked_by_uuid TEXT,
-                                revoked_by_name TEXT,
-                                CHECK (expires_at_ms > issued_at_ms)
-                            )
-                            """);
-                    statement.execute("""
-                            CREATE UNIQUE INDEX bans_one_active_per_player
-                            ON bans(target_uuid) WHERE state = 'ACTIVE'
-                            """);
-                    statement.execute("""
-                            CREATE INDEX bans_active_expiration
-                            ON bans(state, expires_at_ms)
-                            """);
-                    statement.execute("""
-                            CREATE TABLE kicks (
-                                id INTEGER PRIMARY KEY,
-                                target_uuid TEXT NOT NULL,
-                                target_name TEXT NOT NULL,
-                                reason TEXT NOT NULL,
-                                kicked_at_ms INTEGER NOT NULL,
-                                moderator_uuid TEXT,
-                                moderator_name TEXT NOT NULL
-                            )
-                            """);
-                    statement.execute("""
-                            CREATE INDEX kicks_target_time
-                            ON kicks(target_uuid, kicked_at_ms DESC)
-                            """);
-                }
-                try (PreparedStatement statement = connection.prepareStatement(
-                        "INSERT INTO schema_migrations(version, applied_at_ms) VALUES (?, ?)")) {
-                    statement.setInt(1, 1);
-                    statement.setLong(2, clock.millis());
-                    statement.executeUpdate();
-                }
-                return null;
-            });
-            version = 1;
-        }
-        if (version == 1) {
-            inTransaction(() -> {
-                try (Statement statement = connection.createStatement()) {
-                    statement.execute("""
-                            CREATE INDEX bans_target_time
-                            ON bans(target_uuid, issued_at_ms DESC)
-                            """);
-                }
-                try (PreparedStatement statement = connection.prepareStatement(
-                        "INSERT INTO schema_migrations(version, applied_at_ms) VALUES (?, ?)")) {
-                    statement.setInt(1, 2);
-                    statement.setLong(2, clock.millis());
-                    statement.executeUpdate();
-                }
-                return null;
-            });
-        }
-    }
-
-    private int currentSchemaVersion() throws SQLException {
-        try (Statement statement = connection.createStatement();
-                ResultSet tables = statement.executeQuery("""
-                        SELECT 1 FROM sqlite_master
-                        WHERE type = 'table' AND name = 'schema_migrations'
-                        """)) {
-            if (!tables.next()) {
-                return 0;
+    private void initializeSchema() throws SQLException {
+        inTransaction(() -> {
+            try (Statement statement = connection.createStatement()) {
+                statement.execute("""
+                        CREATE TABLE IF NOT EXISTS bans (
+                            id INTEGER PRIMARY KEY,
+                            target_uuid TEXT NOT NULL,
+                            target_name TEXT NOT NULL,
+                            reason TEXT NOT NULL,
+                            issued_at_ms INTEGER NOT NULL,
+                            expires_at_ms INTEGER NOT NULL,
+                            moderator_uuid TEXT,
+                            moderator_name TEXT NOT NULL,
+                            state TEXT NOT NULL DEFAULT 'ACTIVE'
+                                CHECK (state IN ('ACTIVE', 'EXPIRED', 'REVOKED')),
+                            revoked_at_ms INTEGER,
+                            revoked_by_uuid TEXT,
+                            revoked_by_name TEXT,
+                            CHECK (expires_at_ms > issued_at_ms)
+                        )
+                        """);
+                statement.execute("""
+                        CREATE UNIQUE INDEX IF NOT EXISTS bans_one_active_per_player
+                        ON bans(target_uuid) WHERE state = 'ACTIVE'
+                        """);
+                statement.execute("""
+                        CREATE INDEX IF NOT EXISTS bans_active_expiration
+                        ON bans(state, expires_at_ms)
+                        """);
+                statement.execute("""
+                        CREATE INDEX IF NOT EXISTS bans_target_time
+                        ON bans(target_uuid, issued_at_ms DESC)
+                        """);
+                statement.execute("""
+                        CREATE TABLE IF NOT EXISTS kicks (
+                            id INTEGER PRIMARY KEY,
+                            target_uuid TEXT NOT NULL,
+                            target_name TEXT NOT NULL,
+                            reason TEXT NOT NULL,
+                            kicked_at_ms INTEGER NOT NULL,
+                            moderator_uuid TEXT,
+                            moderator_name TEXT NOT NULL
+                        )
+                        """);
+                statement.execute("""
+                        CREATE INDEX IF NOT EXISTS kicks_target_time
+                        ON kicks(target_uuid, kicked_at_ms DESC)
+                        """);
+                statement.execute("""
+                        CREATE TABLE IF NOT EXISTS ip_bans (
+                            id INTEGER PRIMARY KEY,
+                            address TEXT NOT NULL,
+                            target_uuid TEXT,
+                            target_name TEXT,
+                            reason TEXT NOT NULL,
+                            issued_at_ms INTEGER NOT NULL,
+                            expires_at_ms INTEGER NOT NULL,
+                            moderator_uuid TEXT,
+                            moderator_name TEXT NOT NULL,
+                            state TEXT NOT NULL DEFAULT 'ACTIVE'
+                                CHECK (state IN ('ACTIVE', 'EXPIRED', 'REVOKED')),
+                            revoked_at_ms INTEGER,
+                            revoked_by_uuid TEXT,
+                            revoked_by_name TEXT,
+                            CHECK (expires_at_ms > issued_at_ms),
+                            CHECK ((target_uuid IS NULL AND target_name IS NULL)
+                                OR (target_uuid IS NOT NULL AND target_name IS NOT NULL))
+                        )
+                        """);
+                statement.execute("""
+                        CREATE UNIQUE INDEX IF NOT EXISTS ip_bans_one_active_per_address
+                        ON ip_bans(address) WHERE state = 'ACTIVE'
+                        """);
+                statement.execute("""
+                        CREATE INDEX IF NOT EXISTS ip_bans_active_expiration
+                        ON ip_bans(state, expires_at_ms)
+                        """);
+                statement.execute("""
+                        CREATE INDEX IF NOT EXISTS ip_bans_target_time
+                        ON ip_bans(target_uuid, issued_at_ms DESC)
+                        """);
             }
-        }
-        try (Statement statement = connection.createStatement();
-                ResultSet result = statement.executeQuery(
-                        "SELECT COALESCE(MAX(version), 0) FROM schema_migrations")) {
-            return result.next() ? result.getInt(1) : 0;
-        }
+            return null;
+        });
     }
 
     public synchronized List<BanRecord> loadActiveBans(long nowMs) throws SQLException {
@@ -194,40 +175,177 @@ public final class ModerationDatabase implements AutoCloseable {
             Moderator moderator) throws SQLException {
         return inTransaction(() -> {
             expireBans(issuedAtMs);
-            try (PreparedStatement existing = connection.prepareStatement(
-                    "SELECT 1 FROM bans WHERE target_uuid = ? AND state = 'ACTIVE'")) {
-                existing.setString(1, targetUuid.toString());
-                try (ResultSet result = existing.executeQuery()) {
-                    if (result.next()) {
-                        return Optional.empty();
-                    }
-                }
+            if (findActivePlayerBan(targetUuid).isPresent()) {
+                return Optional.empty();
             }
-
-            try (PreparedStatement statement = connection.prepareStatement("""
-                    INSERT INTO bans(
-                        target_uuid, target_name, reason, issued_at_ms, expires_at_ms,
-                        moderator_uuid, moderator_name, state
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, 'ACTIVE')
-                    """, Statement.RETURN_GENERATED_KEYS)) {
-                statement.setString(1, targetUuid.toString());
-                statement.setString(2, targetName);
-                statement.setString(3, reason);
-                statement.setLong(4, issuedAtMs);
-                statement.setLong(5, expiresAtMs);
-                setNullableUuid(statement, 6, moderator.uuid());
-                statement.setString(7, moderator.name());
-                statement.executeUpdate();
-                try (ResultSet keys = statement.getGeneratedKeys()) {
-                    if (!keys.next()) {
-                        throw new SQLException("SQLite did not return the inserted ban ID");
-                    }
-                    return Optional.of(new BanRecord(
-                            keys.getLong(1), targetUuid, targetName, reason, issuedAtMs,
-                            expiresAtMs, moderator.uuid(), moderator.name()));
-                }
-            }
+            return Optional.of(insertBanRow(
+                    targetUuid, targetName, reason, issuedAtMs, expiresAtMs, moderator));
         });
+    }
+
+    public synchronized List<IpBanRecord> loadActiveIpBans(long nowMs) throws SQLException {
+        return inTransaction(() -> {
+            expireIpBans(nowMs);
+            List<IpBanRecord> bans = new ArrayList<>();
+            try (PreparedStatement statement = connection.prepareStatement("""
+                    SELECT id, address, target_uuid, target_name, reason, issued_at_ms,
+                           expires_at_ms, moderator_uuid, moderator_name
+                    FROM ip_bans
+                    WHERE state = 'ACTIVE' AND expires_at_ms > ?
+                    """)) {
+                statement.setLong(1, nowMs);
+                try (ResultSet result = statement.executeQuery()) {
+                    while (result.next()) {
+                        bans.add(readIpBan(result));
+                    }
+                }
+            }
+            return bans;
+        });
+    }
+
+    public synchronized Optional<IpBanRecord> insertIpBan(
+            String address,
+            UUID targetUuid,
+            String targetName,
+            String reason,
+            long issuedAtMs,
+            long expiresAtMs,
+            Moderator moderator) throws SQLException {
+        return inTransaction(() -> {
+            expireIpBans(issuedAtMs);
+            if (findActiveIpBan(address).isPresent()) {
+                return Optional.empty();
+            }
+            return Optional.of(insertIpBanRow(
+                    address, targetUuid, targetName, reason,
+                    issuedAtMs, expiresAtMs, moderator));
+        });
+    }
+
+    public synchronized Optional<PlayerIpBanResult> insertPlayerIpBan(
+            String address,
+            UUID targetUuid,
+            String targetName,
+            String reason,
+            long issuedAtMs,
+            long expiresAtMs,
+            Moderator moderator) throws SQLException {
+        return inTransaction(() -> {
+            expireBans(issuedAtMs);
+            expireIpBans(issuedAtMs);
+            Optional<BanRecord> existingPlayerBan = findActivePlayerBan(targetUuid);
+            Optional<IpBanRecord> existingIpBan = findActiveIpBan(address);
+            if (existingPlayerBan.isPresent() && existingIpBan.isPresent()) {
+                return Optional.empty();
+            }
+            BanRecord playerBan = existingPlayerBan.isPresent()
+                    ? existingPlayerBan.get()
+                    : insertBanRow(
+                            targetUuid, targetName, reason, issuedAtMs, expiresAtMs, moderator);
+            IpBanRecord ipBan = existingIpBan.isPresent()
+                    ? existingIpBan.get()
+                    : insertIpBanRow(
+                            address, targetUuid, targetName, reason,
+                            issuedAtMs, expiresAtMs, moderator);
+            return Optional.of(new PlayerIpBanResult(playerBan, ipBan));
+        });
+    }
+
+    private Optional<BanRecord> findActivePlayerBan(UUID targetUuid) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement("""
+                SELECT id, target_uuid, target_name, reason, issued_at_ms, expires_at_ms,
+                       moderator_uuid, moderator_name
+                FROM bans WHERE target_uuid = ? AND state = 'ACTIVE'
+                """)) {
+            statement.setString(1, targetUuid.toString());
+            try (ResultSet result = statement.executeQuery()) {
+                return result.next() ? Optional.of(readBan(result)) : Optional.empty();
+            }
+        }
+    }
+
+    private Optional<IpBanRecord> findActiveIpBan(String address) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement("""
+                SELECT id, address, target_uuid, target_name, reason, issued_at_ms,
+                       expires_at_ms, moderator_uuid, moderator_name
+                FROM ip_bans WHERE address = ? AND state = 'ACTIVE'
+                """)) {
+            statement.setString(1, address);
+            try (ResultSet result = statement.executeQuery()) {
+                return result.next() ? Optional.of(readIpBan(result)) : Optional.empty();
+            }
+        }
+    }
+
+    private BanRecord insertBanRow(
+            UUID targetUuid,
+            String targetName,
+            String reason,
+            long issuedAtMs,
+            long expiresAtMs,
+            Moderator moderator) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement("""
+                INSERT INTO bans(
+                    target_uuid, target_name, reason, issued_at_ms, expires_at_ms,
+                    moderator_uuid, moderator_name, state
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, 'ACTIVE')
+                """, Statement.RETURN_GENERATED_KEYS)) {
+            statement.setString(1, targetUuid.toString());
+            statement.setString(2, targetName);
+            statement.setString(3, reason);
+            statement.setLong(4, issuedAtMs);
+            statement.setLong(5, expiresAtMs);
+            setNullableUuid(statement, 6, moderator.uuid());
+            statement.setString(7, moderator.name());
+            statement.executeUpdate();
+            try (ResultSet keys = statement.getGeneratedKeys()) {
+                if (!keys.next()) {
+                    throw new SQLException("SQLite did not return the inserted ban ID");
+                }
+                return new BanRecord(
+                        keys.getLong(1), targetUuid, targetName, reason, issuedAtMs,
+                        expiresAtMs, moderator.uuid(), moderator.name());
+            }
+        }
+    }
+
+    private IpBanRecord insertIpBanRow(
+            String address,
+            UUID targetUuid,
+            String targetName,
+            String reason,
+            long issuedAtMs,
+            long expiresAtMs,
+            Moderator moderator) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement("""
+                INSERT INTO ip_bans(
+                    address, target_uuid, target_name, reason, issued_at_ms, expires_at_ms,
+                    moderator_uuid, moderator_name, state
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVE')
+                """, Statement.RETURN_GENERATED_KEYS)) {
+            statement.setString(1, address);
+            setNullableUuid(statement, 2, targetUuid);
+            if (targetName == null) {
+                statement.setNull(3, java.sql.Types.VARCHAR);
+            } else {
+                statement.setString(3, targetName);
+            }
+            statement.setString(4, reason);
+            statement.setLong(5, issuedAtMs);
+            statement.setLong(6, expiresAtMs);
+            setNullableUuid(statement, 7, moderator.uuid());
+            statement.setString(8, moderator.name());
+            statement.executeUpdate();
+            try (ResultSet keys = statement.getGeneratedKeys()) {
+                if (!keys.next()) {
+                    throw new SQLException("SQLite did not return the inserted IP-ban ID");
+                }
+                return new IpBanRecord(
+                        keys.getLong(1), address, targetUuid, targetName, reason,
+                        issuedAtMs, expiresAtMs, moderator.uuid(), moderator.name());
+            }
+        }
     }
 
     public synchronized void insertKick(
@@ -265,6 +383,7 @@ public final class ModerationDatabase implements AutoCloseable {
 
         return inTransaction(() -> {
             expireBans(clock.millis());
+            expireIpBans(clock.millis());
             long totalRecords = countHistory(targetUuid, filter);
             return new AuditPage(queryHistory(targetUuid, filter, limit, offset), totalRecords);
         });
@@ -276,14 +395,24 @@ public final class ModerationDatabase implements AutoCloseable {
                     SELECT
                         (SELECT COUNT(*) FROM bans WHERE target_uuid = ?)
                         + (SELECT COUNT(*) FROM kicks WHERE target_uuid = ?)
+                        + (SELECT COUNT(*) FROM ip_bans WHERE target_uuid = ?)
                     """;
-            case BANS -> "SELECT COUNT(*) FROM bans WHERE target_uuid = ?";
+            case BANS -> """
+                    SELECT
+                        (SELECT COUNT(*) FROM bans WHERE target_uuid = ?)
+                        + (SELECT COUNT(*) FROM ip_bans WHERE target_uuid = ?)
+                    """;
             case KICKS -> "SELECT COUNT(*) FROM kicks WHERE target_uuid = ?";
         };
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setString(1, targetUuid.toString());
-            if (filter == AuditFilter.ALL) {
-                statement.setString(2, targetUuid.toString());
+            int targetParameters = switch (filter) {
+                case ALL -> 3;
+                case BANS -> 2;
+                case KICKS -> 1;
+            };
+            for (int parameter = 2; parameter <= targetParameters; parameter++) {
+                statement.setString(parameter, targetUuid.toString());
             }
             try (ResultSet result = statement.executeQuery()) {
                 return result.next() ? result.getLong(1) : 0;
@@ -298,33 +427,46 @@ public final class ModerationDatabase implements AutoCloseable {
             int offset) throws SQLException {
         String sql = switch (filter) {
             case ALL -> """
-                    SELECT id, action, target_uuid, target_name, reason, occurred_at_ms,
+                    SELECT id, action, target_uuid, target_name, address, reason, occurred_at_ms,
                            expires_at_ms, moderator_uuid, moderator_name, state
                     FROM (
-                        SELECT id, 'BAN' AS action, target_uuid, target_name, reason,
+                        SELECT id, 'BAN' AS action, target_uuid, target_name, NULL AS address, reason,
                                issued_at_ms AS occurred_at_ms, expires_at_ms,
                                moderator_uuid, moderator_name, state
                         FROM bans WHERE target_uuid = ?
                         UNION ALL
-                        SELECT id, 'KICK' AS action, target_uuid, target_name, reason,
+                        SELECT id, 'KICK' AS action, target_uuid, target_name, NULL AS address, reason,
                                kicked_at_ms AS occurred_at_ms, NULL AS expires_at_ms,
                                moderator_uuid, moderator_name, NULL AS state
                         FROM kicks WHERE target_uuid = ?
+                        UNION ALL
+                        SELECT id, 'IP_BAN' AS action, target_uuid, target_name, address, reason,
+                               issued_at_ms AS occurred_at_ms, expires_at_ms,
+                               moderator_uuid, moderator_name, state
+                        FROM ip_bans WHERE target_uuid = ?
                     )
                     ORDER BY occurred_at_ms DESC, id DESC, action ASC
                     LIMIT ? OFFSET ?
                     """;
             case BANS -> """
-                    SELECT id, 'BAN' AS action, target_uuid, target_name, reason,
-                           issued_at_ms AS occurred_at_ms, expires_at_ms,
-                           moderator_uuid, moderator_name, state
-                    FROM bans
-                    WHERE target_uuid = ?
-                    ORDER BY occurred_at_ms DESC, id DESC
+                    SELECT id, action, target_uuid, target_name, address, reason, occurred_at_ms,
+                           expires_at_ms, moderator_uuid, moderator_name, state
+                    FROM (
+                        SELECT id, 'BAN' AS action, target_uuid, target_name,
+                               NULL AS address, reason, issued_at_ms AS occurred_at_ms,
+                               expires_at_ms, moderator_uuid, moderator_name, state
+                        FROM bans WHERE target_uuid = ?
+                        UNION ALL
+                        SELECT id, 'IP_BAN' AS action, target_uuid, target_name,
+                               address, reason, issued_at_ms AS occurred_at_ms,
+                               expires_at_ms, moderator_uuid, moderator_name, state
+                        FROM ip_bans WHERE target_uuid = ?
+                    )
+                    ORDER BY occurred_at_ms DESC, id DESC, action ASC
                     LIMIT ? OFFSET ?
                     """;
             case KICKS -> """
-                    SELECT id, 'KICK' AS action, target_uuid, target_name, reason,
+                    SELECT id, 'KICK' AS action, target_uuid, target_name, NULL AS address, reason,
                            kicked_at_ms AS occurred_at_ms, NULL AS expires_at_ms,
                            moderator_uuid, moderator_name, NULL AS state
                     FROM kicks
@@ -338,7 +480,12 @@ public final class ModerationDatabase implements AutoCloseable {
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             int parameter = 1;
             statement.setString(parameter++, targetUuid.toString());
-            if (filter == AuditFilter.ALL) {
+            int targetParameters = switch (filter) {
+                case ALL -> 3;
+                case BANS -> 2;
+                case KICKS -> 1;
+            };
+            while (parameter <= targetParameters) {
                 statement.setString(parameter++, targetUuid.toString());
             }
             statement.setInt(parameter++, limit);
@@ -362,13 +509,19 @@ public final class ModerationDatabase implements AutoCloseable {
         }
     }
 
-    synchronized int schemaVersion() throws SQLException {
-        return currentSchemaVersion();
-    }
-
     private void expireBans(long nowMs) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement("""
                 UPDATE bans SET state = 'EXPIRED'
+                WHERE state = 'ACTIVE' AND expires_at_ms <= ?
+                """)) {
+            statement.setLong(1, nowMs);
+            statement.executeUpdate();
+        }
+    }
+
+    private void expireIpBans(long nowMs) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement("""
+                UPDATE ip_bans SET state = 'EXPIRED'
                 WHERE state = 'ACTIVE' AND expires_at_ms <= ?
                 """)) {
             statement.setLong(1, nowMs);
@@ -393,6 +546,25 @@ public final class ModerationDatabase implements AutoCloseable {
         }
     }
 
+    private static IpBanRecord readIpBan(ResultSet result) throws SQLException {
+        try {
+            String target = result.getString("target_uuid");
+            String moderator = result.getString("moderator_uuid");
+            return new IpBanRecord(
+                    result.getLong("id"),
+                    result.getString("address"),
+                    target == null ? null : UUID.fromString(target),
+                    result.getString("target_name"),
+                    result.getString("reason"),
+                    result.getLong("issued_at_ms"),
+                    result.getLong("expires_at_ms"),
+                    moderator == null ? null : UUID.fromString(moderator),
+                    result.getString("moderator_name"));
+        } catch (IllegalArgumentException e) {
+            throw new SQLException("Database contains an invalid IP-ban value", e);
+        }
+    }
+
     private static AuditRecord readAuditRecord(ResultSet result) throws SQLException {
         try {
             String moderator = result.getString("moderator_uuid");
@@ -403,6 +575,7 @@ public final class ModerationDatabase implements AutoCloseable {
                     AuditRecord.Action.valueOf(result.getString("action")),
                     UUID.fromString(result.getString("target_uuid")),
                     result.getString("target_name"),
+                    result.getString("address"),
                     result.getString("reason"),
                     result.getLong("occurred_at_ms"),
                     expiresAtMs,

@@ -3,7 +3,9 @@
   "package": "f1nal.essentials.mixin",
   "mixins": [
     "BanPlayerCommandsMixin",
-    "KickCommandMixin"
+    "BanIpCommandsMixin",
+    "KickCommandMixin",
+    "ServerCommonPacketListenerAccessor"
   ],
   "injectors": {
     "defaultRequire": 1

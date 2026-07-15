@@ -29,6 +29,18 @@ class ModerationMessageFormatterTest {
     }
 
     @Test
+    void rendersIpBanPlaceholders() {
+        IpBanRecord ban = new IpBanRecord(
+                2, "192.0.2.10", null, null, "Proxy", 1_000, 3_601_000,
+                null, "CONSOLE");
+
+        assertEquals(
+                "192.0.2.10|Proxy|CONSOLE|1h|1970-01-01T01:00:01Z",
+                ModerationMessageFormatter.ipBanMessage(
+                        "{player}|{reason}|{moderator}|{time}|{expires_at}", ban, 1_000));
+    }
+
+    @Test
     void doesNotInterpretPlaceholdersInsideReasons() {
         assertEquals(
                 "Reason: literal {moderator}",

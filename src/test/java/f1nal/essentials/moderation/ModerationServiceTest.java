@@ -34,6 +34,27 @@ class ModerationServiceTest {
         }
     }
 
+    @Test
+    void combinedPlayerAndIpBanCachesExpireTogetherWithoutDatabaseIo() throws Exception {
+        MutableClock clock = new MutableClock(20_000L);
+        UUID target = UUID.randomUUID();
+
+        try (ModerationService service = ModerationService.open(
+                tempDir.resolve("essentials.db"), clock)) {
+            assertTrue(service.banPlayerIp(
+                    "192.0.2.10", target, "Target", "Reason", 1_000L,
+                    new Moderator(null, "CONSOLE")).isPresent());
+            assertTrue(service.activeBan(target).isPresent());
+            assertTrue(service.activeIpBan("192.0.2.10").isPresent());
+            assertTrue(service.activeIpBans(target).size() == 1);
+
+            clock.setMillis(21_000L);
+            assertTrue(service.activeBan(target).isEmpty());
+            assertTrue(service.activeIpBan("192.0.2.10").isEmpty());
+            assertTrue(service.activeIpBans(target).isEmpty());
+        }
+    }
+
     private static final class MutableClock extends Clock {
         private long millis;
 

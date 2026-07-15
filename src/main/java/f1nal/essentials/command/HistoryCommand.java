@@ -3,6 +3,7 @@ package f1nal.essentials.command;
 import java.sql.SQLException;
 import java.time.ZoneId;
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 import com.mojang.brigadier.CommandDispatcher;
@@ -18,6 +19,7 @@ import f1nal.essentials.moderation.AuditFilter;
 import f1nal.essentials.moderation.AuditPage;
 import f1nal.essentials.moderation.AuditRecord;
 import f1nal.essentials.moderation.BanRecord;
+import f1nal.essentials.moderation.IpBanRecord;
 import f1nal.essentials.moderation.ModerationManager;
 import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
@@ -101,11 +103,13 @@ public final class HistoryCommand {
         int offset = (pageNumber - 1) * PAGE_SIZE;
         AuditPage page;
         Optional<BanRecord> activeBan;
+        List<IpBanRecord> activeIpBans;
         long nowMs;
         try {
             var moderation = ModerationManager.get();
             page = moderation.history(target.id(), filter, PAGE_SIZE, offset);
             activeBan = moderation.activeBan(target.id());
+            activeIpBans = moderation.activeIpBans(target.id());
             nowMs = moderation.nowMs();
         } catch (SQLException | IllegalStateException e) {
             Essentials.LOGGER.error("Failed to read moderation history for {}", target.id(), e);
@@ -131,6 +135,12 @@ public final class HistoryCommand {
         activeBan.ifPresent(ban -> source.sendSuccess(
                 () -> Messages.custom(AuditEntryFormatter.formatActiveBan(ban, nowMs, serverZone)),
                 false));
+        for (IpBanRecord ban : activeIpBans) {
+            source.sendSuccess(
+                    () -> Messages.custom(
+                            AuditEntryFormatter.formatActiveIpBan(ban, nowMs, serverZone)),
+                    false);
+        }
         if (page.records().isEmpty()) {
             source.sendSuccess(() -> Messages.info("No matching moderation records."), false);
             return 1;

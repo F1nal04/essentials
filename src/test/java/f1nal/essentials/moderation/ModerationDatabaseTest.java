@@ -22,13 +22,12 @@ class ModerationDatabaseTest {
     Path tempDir;
 
     @Test
-    void migratesPersistsBansAndAlwaysRecordsKicks() throws Exception {
+    void persistsBansAndAlwaysRecordsKicks() throws Exception {
         Path path = tempDir.resolve("essentials.db");
         UUID target = UUID.randomUUID();
         Moderator moderator = new Moderator(UUID.randomUUID(), "Mod");
 
         try (ModerationDatabase database = ModerationDatabase.open(path, CLOCK)) {
-            assertEquals(2, database.schemaVersion());
             Optional<BanRecord> inserted = database.insertBan(
                     target, "Target", "Reason", 1_000_000L, 2_000_000L, moderator);
             assertTrue(inserted.isPresent());
@@ -98,29 +97,84 @@ class ModerationDatabaseTest {
     }
 
     @Test
-    void upgradesExistingVersionOneDatabaseForHistoryQueries() throws Exception {
+    void persistsExpiresAndAuditsPlayerAssociatedIpBans() throws Exception {
+        UUID target = UUID.randomUUID();
+        Moderator moderator = new Moderator(UUID.randomUUID(), "Mod");
+
+        try (ModerationDatabase database = ModerationDatabase.open(
+                tempDir.resolve("essentials.db"), CLOCK)) {
+            Optional<IpBanRecord> inserted = database.insertIpBan(
+                    "2001:db8::1", target, "Target", "Proxy", 1_000L, 2_000L, moderator);
+            assertTrue(inserted.isPresent());
+            assertTrue(database.insertIpBan(
+                    "2001:db8::1", null, null, "Other", 1_100L, 2_100L, moderator).isEmpty());
+            assertEquals(1, database.loadActiveIpBans(1_500L).size());
+            assertTrue(database.loadActiveIpBans(2_000L).isEmpty());
+            assertTrue(database.insertIpBan(
+                    "2001:db8::1", null, null, "Replacement", 2_000L, 3_000L, moderator)
+                    .isPresent());
+
+            AuditPage history = database.loadHistory(target, AuditFilter.BANS, 10, 0);
+            assertEquals(1, history.totalRecords());
+            assertEquals(AuditRecord.Action.IP_BAN, history.records().getFirst().action());
+            assertEquals("2001:db8::1", history.records().getFirst().address());
+            assertEquals("EXPIRED", history.records().getFirst().state());
+        }
+    }
+
+    @Test
+    void atomicallyBansPlayerAccountAndIpAddress() throws Exception {
+        UUID target = UUID.randomUUID();
+        UUID otherTarget = UUID.randomUUID();
+        Moderator moderator = new Moderator(null, "CONSOLE");
+
+        try (ModerationDatabase database = ModerationDatabase.open(
+                tempDir.resolve("essentials.db"), CLOCK)) {
+            Optional<PlayerIpBanResult> inserted = database.insertPlayerIpBan(
+                    "192.0.2.20", target, "Target", "Evasion",
+                    1_000_000L, 2_000_000L, moderator);
+            assertTrue(inserted.isPresent());
+            assertEquals(target, inserted.get().playerBan().targetUuid());
+            assertEquals("192.0.2.20", inserted.get().ipBan().address());
+            assertEquals(1, database.loadActiveBans(1_500_000L).size());
+            assertEquals(1, database.loadActiveIpBans(1_500_000L).size());
+
+            Optional<PlayerIpBanResult> sharedAddress = database.insertPlayerIpBan(
+                    "192.0.2.20", otherTarget, "Other", "Other reason",
+                    1_100_000L, 2_100_000L, moderator);
+            assertTrue(sharedAddress.isPresent());
+            assertEquals(target, sharedAddress.get().ipBan().targetUuid());
+            assertEquals(1, database.loadHistory(
+                    otherTarget, AuditFilter.BANS, 10, 0).totalRecords());
+            assertEquals(2, database.loadActiveBans(1_500_000L).size());
+            assertEquals(1, database.loadActiveIpBans(1_500_000L).size());
+
+            assertTrue(database.insertPlayerIpBan(
+                    "192.0.2.20", target, "Target", "Duplicate",
+                    1_150_000L, 2_150_000L, moderator).isEmpty());
+
+            AuditPage history = database.loadHistory(target, AuditFilter.BANS, 10, 0);
+            assertEquals(2, history.totalRecords());
+            assertTrue(history.records().stream()
+                    .anyMatch(record -> record.action() == AuditRecord.Action.BAN));
+            assertTrue(history.records().stream()
+                    .anyMatch(record -> record.action() == AuditRecord.Action.IP_BAN));
+        }
+    }
+
+    @Test
+    void initializesCurrentSchemaWithoutMigrationTable() throws Exception {
         Path path = tempDir.resolve("essentials.db");
         try (ModerationDatabase ignored = ModerationDatabase.open(path, CLOCK)) {
-            // Create the current database first, then faithfully simulate the
-            // schema state written by releases that stopped at migration 1.
-        }
-        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + path.toAbsolutePath());
-                var statement = connection.createStatement()) {
-            statement.execute("DROP INDEX bans_target_time");
-            statement.execute("DELETE FROM schema_migrations WHERE version = 2");
-        }
-
-        try (ModerationDatabase upgraded = ModerationDatabase.open(path, CLOCK)) {
-            assertEquals(2, upgraded.schemaVersion());
         }
         try (var connection = DriverManager.getConnection("jdbc:sqlite:" + path.toAbsolutePath());
                 var statement = connection.prepareStatement("""
                         SELECT COUNT(*) FROM sqlite_master
-                        WHERE type = 'index' AND name = 'bans_target_time'
+                        WHERE type = 'table' AND name = 'schema_migrations'
                         """);
                 var result = statement.executeQuery()) {
             assertTrue(result.next());
-            assertEquals(1, result.getInt(1));
+            assertEquals(0, result.getInt(1));
         }
     }
 }

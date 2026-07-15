@@ -24,13 +24,16 @@ public final class AuditEntryFormatter {
         DateTimeFormatter timestamp = DateTimeFormatter
                 .ofPattern("dd/MM/uuuu HH:mm:ss z", Locale.ROOT)
                 .withZone(zone);
-        String duration = record.action() == AuditRecord.Action.BAN
-                ? DurationParser.formatDuration(record.durationMs())
-                : KICK_DURATION;
-        ChatFormatting actionColor = record.action() == AuditRecord.Action.BAN
-                ? ChatFormatting.DARK_RED
-                : ChatFormatting.GOLD;
-        MutableComponent line = Component.literal("[" + record.action() + "]")
+        String duration = record.action() == AuditRecord.Action.KICK
+                ? KICK_DURATION
+                : DurationParser.formatDuration(record.durationMs());
+        ChatFormatting actionColor = record.action() == AuditRecord.Action.KICK
+                ? ChatFormatting.GOLD
+                : ChatFormatting.DARK_RED;
+        String actionLabel = record.action() == AuditRecord.Action.IP_BAN
+                ? "IP BAN"
+                : record.action().name();
+        MutableComponent line = Component.literal("[" + actionLabel + "]")
                 .withStyle(actionColor)
                 .append(label(" When: "))
                 .append(value(timestamp.format(Instant.ofEpochMilli(record.occurredAtMs()))))
@@ -40,6 +43,10 @@ public final class AuditEntryFormatter {
                 .append(value(record.moderatorName()))
                 .append(label(" | Reason: "))
                 .append(value(record.reason()));
+        if (record.address() != null) {
+            line.append(label(" | Address: "))
+                    .append(value(record.address()));
+        }
         if (record.state() != null) {
             line.append(label(" | Status: "))
                     .append(Component.literal(record.state().toLowerCase(Locale.ROOT))
@@ -54,6 +61,24 @@ public final class AuditEntryFormatter {
                 .withZone(zone);
         return Component.literal("ACTIVE BAN")
                 .withStyle(ChatFormatting.DARK_GREEN)
+                .append(label(" | Remaining: "))
+                .append(value(DurationParser.formatRemaining(ban.expiresAtMs() - nowMs)))
+                .append(label(" | Expires: "))
+                .append(value(timestamp.format(Instant.ofEpochMilli(ban.expiresAtMs()))))
+                .append(label(" | By: "))
+                .append(value(ban.moderatorName()))
+                .append(label(" | Reason: "))
+                .append(value(ban.reason()));
+    }
+
+    public static Component formatActiveIpBan(IpBanRecord ban, long nowMs, ZoneId zone) {
+        DateTimeFormatter timestamp = DateTimeFormatter
+                .ofPattern("dd/MM/uuuu HH:mm:ss z", Locale.ROOT)
+                .withZone(zone);
+        return Component.literal("ACTIVE IP BAN")
+                .withStyle(ChatFormatting.DARK_GREEN)
+                .append(label(" | Address: "))
+                .append(value(ban.address()))
                 .append(label(" | Remaining: "))
                 .append(value(DurationParser.formatRemaining(ban.expiresAtMs() - nowMs)))
                 .append(label(" | Expires: "))

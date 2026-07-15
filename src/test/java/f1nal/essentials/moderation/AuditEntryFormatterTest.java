@@ -18,6 +18,7 @@ class AuditEntryFormatterTest {
                 AuditRecord.Action.BAN,
                 TARGET,
                 "Target",
+                null,
                 "Griefing",
                 0,
                 5_400_000L,
@@ -38,6 +39,7 @@ class AuditEntryFormatterTest {
                 AuditRecord.Action.KICK,
                 TARGET,
                 "Target",
+                null,
                 "Spam",
                 60_000,
                 null,
@@ -67,5 +69,47 @@ class AuditEntryFormatterTest {
                 "ACTIVE BAN | Remaining: 1h 30m | Expires: 01/01/1970 01:30:00 Z"
                         + " | By: CONSOLE | Reason: Active reason",
                 AuditEntryFormatter.formatActiveBan(ban, 0, ZoneOffset.UTC).getString());
+    }
+
+    @Test
+    void formatsPlayerAssociatedIpBan() {
+        AuditRecord ban = new AuditRecord(
+                4,
+                AuditRecord.Action.IP_BAN,
+                TARGET,
+                "Target",
+                "2001:db8::1",
+                "Proxy abuse",
+                0,
+                3_600_000L,
+                null,
+                "CONSOLE",
+                "ACTIVE");
+
+        assertEquals(
+                "[IP BAN] When: 01/01/1970 00:00:00 Z | Duration: 1h"
+                        + " | By: CONSOLE | Reason: Proxy abuse | Address: 2001:db8::1"
+                        + " | Status: active",
+                AuditEntryFormatter.format(ban, ZoneOffset.UTC));
+    }
+
+    @Test
+    void formatsActiveIpBanBanner() {
+        IpBanRecord ban = new IpBanRecord(
+                5,
+                "192.0.2.10",
+                TARGET,
+                "Target",
+                "Active proxy",
+                0,
+                5_400_000L,
+                null,
+                "CONSOLE");
+
+        assertEquals(
+                "ACTIVE IP BAN | Address: 192.0.2.10 | Remaining: 1h 30m"
+                        + " | Expires: 01/01/1970 01:30:00 Z"
+                        + " | By: CONSOLE | Reason: Active proxy",
+                AuditEntryFormatter.formatActiveIpBan(ban, 0, ZoneOffset.UTC).getString());
     }
 }

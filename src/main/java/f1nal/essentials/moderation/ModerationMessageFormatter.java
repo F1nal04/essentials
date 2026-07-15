@@ -22,6 +22,15 @@ public final class ModerationMessageFormatter {
                 "expires_at", Instant.ofEpochMilli(ban.expiresAtMs()).toString()));
     }
 
+    public static String ipBanMessage(String template, IpBanRecord ban, long nowMs) {
+        return render(template, Map.of(
+                "player", ban.targetDisplay(),
+                "reason", ban.reason(),
+                "moderator", ban.moderatorName(),
+                "time", DurationParser.formatRemaining(ban.expiresAtMs() - nowMs),
+                "expires_at", Instant.ofEpochMilli(ban.expiresAtMs()).toString()));
+    }
+
     public static String kickMessage(String template, String targetName, String reason, String moderatorName) {
         return render(template, Map.of(
                 "player", targetName,

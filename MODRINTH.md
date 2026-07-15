@@ -13,6 +13,7 @@ Essentials focuses on the features most small SMPs need: teleport requests, pers
 - **Live inventory views** – Changes are synchronized while the inspected player or other viewers have the same storage open
 - **Administration utilities** – Repair items, heal or feed players, and toggle survival flight
 - **Timed bans** – `/ban <player> <duration> <reason>` persists ban state in SQLite and blocks reconnects until expiry
+- **Timed IP bans** – `/ban-ip <address-or-player> <duration> <reason>` (alias `/banip`) bans a literal address, or both the account and current address when targeting an online player
 - **Audited kicks** – `/kick <player> <reason>` uses a configurable disconnect message and always records the moderator action
 - **Moderation history** – `/history <player> [all|bans|kicks] [page]` (alias `/audit`) gives operators a paginated audit view for online or offline players, including any active ban
 - **Disposal inventory** – Safely delete unwanted items using `/disposal` or its aliases `/trash` and `/trashcan`

@@ -7,6 +7,7 @@ public record AuditRecord(
         Action action,
         UUID targetUuid,
         String targetName,
+        String address,
         String reason,
         long occurredAtMs,
         Long expiresAtMs,
@@ -16,11 +17,12 @@ public record AuditRecord(
 
     public enum Action {
         BAN,
+        IP_BAN,
         KICK
     }
 
     public long durationMs() {
-        if (action != Action.BAN || expiresAtMs == null) {
+        if (action == Action.KICK || expiresAtMs == null) {
             return 0;
         }
         return expiresAtMs - occurredAtMs;
