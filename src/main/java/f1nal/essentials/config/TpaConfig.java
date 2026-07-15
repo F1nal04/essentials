@@ -1,6 +1,5 @@
 package f1nal.essentials.config;
 
-import net.fabricmc.loader.api.FabricLoader;
 import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.Yaml;
 
@@ -32,7 +31,7 @@ public final class TpaConfig {
     }
 
     static TpaConfig loadOrDefaults() {
-        Path cfg = FabricLoader.getInstance().getConfigDir().resolve("essentials.yaml");
+        Path cfg = ConfigPaths.configFile();
         if (!Files.exists(cfg)) {
             return defaults();
         }

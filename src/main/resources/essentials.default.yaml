@@ -23,6 +23,13 @@ tpa:
   # Cooldown after cancelling a request before you can send another
   cooldown_seconds: 10
 
+moderation:
+  # Placeholders: {player}, {reason}, {moderator}, {time}, {expires_at}
+  # Use & followed by a Minecraft formatting code (for example &c or &l).
+  ban_message: "&cYou are banned from this server.\n&7Reason: &f{reason}\n&7Time remaining: &f{time}"
+  # Placeholders: {player}, {reason}, {moderator}
+  kick_message: "&cYou were kicked from this server.\n&7Reason: &f{reason}"
+
 commands:
   # Access: op | all
   repair:
@@ -56,5 +63,11 @@ commands:
     enabled: true
     access: "op"
   inventorysee:
+    enabled: true
+    access: "op"
+  ban:
+    enabled: true
+    access: "op"
+  kick:
     enabled: true
     access: "op"

@@ -10,14 +10,13 @@ import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.Yaml;
 
 import f1nal.essentials.Essentials;
-import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 
 public final class CommandConfig {
 
     public static Map<String, CommandSettings> loadCommandSettings() {
-        Path cfg = FabricLoader.getInstance().getConfigDir().resolve("essentials.yaml");
+        Path cfg = ConfigPaths.configFile();
         if (!Files.exists(cfg)) {
             return defaults();
         }
@@ -77,6 +76,8 @@ public final class CommandConfig {
         defaults.put("backpacksee", new CommandSettings(true, "op"));
         defaults.put("enderchestsee", new CommandSettings(true, "op"));
         defaults.put("inventorysee", new CommandSettings(true, "op"));
+        defaults.put("ban", new CommandSettings(true, "op"));
+        defaults.put("kick", new CommandSettings(true, "op"));
         return defaults;
     }
 

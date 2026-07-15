@@ -23,7 +23,7 @@ public final class ConfigMigrator {
 
     public static void run() {
         Path configDir = FabricLoader.getInstance().getConfigDir();
-        Path target = configDir.resolve("essentials.yaml");
+        Path target = ConfigPaths.configFile(configDir);
 
         String template = readBundledDefault();
         if (template == null) {
@@ -32,8 +32,9 @@ public final class ConfigMigrator {
         }
 
         try {
+            Files.createDirectories(target.getParent());
+            moveLegacyConfigIfNeeded(configDir, target);
             if (!Files.exists(target)) {
-                Files.createDirectories(configDir);
                 Files.writeString(target, template, StandardCharsets.UTF_8);
                 Essentials.LOGGER.info("Wrote default config to {}", target.toAbsolutePath());
                 return;
@@ -51,7 +52,7 @@ public final class ConfigMigrator {
                         "Essentials config schema changed with this mod update, but was not migrated automatically ({}):\n{}Please update {} by hand.",
                         result.reason(), changeList(result), target.toAbsolutePath());
                 case MERGED -> {
-                    Path backup = configDir.resolve("essentials.yaml.bak");
+                    Path backup = target.resolveSibling("essentials.yaml.bak");
                     Files.copy(target, backup, StandardCopyOption.REPLACE_EXISTING);
                     Files.writeString(target, result.mergedText(), StandardCharsets.UTF_8);
                     Essentials.LOGGER.warn(
@@ -65,18 +66,41 @@ public final class ConfigMigrator {
         }
     }
 
+    static void moveLegacyConfigIfNeeded(Path configDir, Path target) throws IOException {
+        Path legacy = ConfigPaths.legacyConfigFile(configDir);
+        if (!Files.exists(legacy)) {
+            return;
+        }
+        if (Files.exists(target)) {
+            Essentials.LOGGER.warn(
+                    "Both legacy config {} and current config {} exist; using the current config and leaving the legacy file untouched.",
+                    legacy.toAbsolutePath(), target.toAbsolutePath());
+            return;
+        }
+        Files.createDirectories(target.getParent());
+        Files.move(legacy, target);
+        Essentials.LOGGER.info("Moved Essentials config from {} to {}", legacy.toAbsolutePath(), target.toAbsolutePath());
+    }
+
     private static String changeList(ConfigMerger.Result result) {
         StringBuilder sb = new StringBuilder();
         for (ConfigMerger.Entry e : result.added()) {
-            sb.append("  + ").append(e.path()).append(" (added, default: ").append(e.value()).append(")\n");
+            sb.append("  + ").append(e.path()).append(" (added, default: ")
+                    .append(displayValue(e.value())).append(")\n");
         }
         for (ConfigMerger.Entry e : result.removed()) {
-            sb.append("  - ").append(e.path()).append(" (removed; old value: ").append(e.value()).append(")\n");
+            sb.append("  - ").append(e.path()).append(" (removed; old value: ")
+                    .append(displayValue(e.value())).append(")\n");
         }
         for (ConfigMerger.Entry e : result.reset()) {
-            sb.append("  ~ ").append(e.path()).append(" (reset to default; old value: ").append(e.value()).append(")\n");
+            sb.append("  ~ ").append(e.path()).append(" (reset to default; old value: ")
+                    .append(displayValue(e.value())).append(")\n");
         }
         return sb.toString();
+    }
+
+    private static String displayValue(Object value) {
+        return String.valueOf(value).replace("\n", "\\n").replace("\r", "\\r");
     }
 
     private static String readBundledDefault() {

@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 
 import f1nal.essentials.backpack.BackpackManager;
 import f1nal.essentials.command.BackCommand;
+import f1nal.essentials.command.BanCommand;
 import f1nal.essentials.command.BackpackCommand;
 import f1nal.essentials.command.BackpackSeeCommand;
 import f1nal.essentials.command.DisposalCommand;
@@ -15,15 +16,18 @@ import f1nal.essentials.command.FeedCommand;
 import f1nal.essentials.command.FlightCommand;
 import f1nal.essentials.command.HealCommand;
 import f1nal.essentials.command.InventorySeeCommand;
+import f1nal.essentials.command.KickCommand;
 import f1nal.essentials.command.RepairCommand;
 import f1nal.essentials.command.TpaCommands;
 import f1nal.essentials.config.CommandConfig;
 import f1nal.essentials.config.CommandConfig.CommandSettings;
 import f1nal.essentials.config.ConfigMigrator;
+import f1nal.essentials.moderation.ModerationManager;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+import net.fabricmc.fabric.api.networking.v1.ServerConfigurationConnectionEvents;
 
 public class Essentials implements ModInitializer {
 
@@ -118,11 +122,31 @@ public class Essentials implements ModInitializer {
                     -> InventorySeeCommand.register(dispatcher, registryAccess, environment, inventorySeeSettings)
             );
         }
+
+        CommandSettings banSettings = commandSettings.get("ban");
+        if (banSettings != null && banSettings.enabled()) {
+            CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment)
+                    -> BanCommand.register(dispatcher, registryAccess, environment, banSettings)
+            );
+        }
+
+        CommandSettings kickSettings = commandSettings.get("kick");
+        if (kickSettings != null && kickSettings.enabled()) {
+            CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment)
+                    -> KickCommand.register(dispatcher, registryAccess, environment, kickSettings)
+            );
+        }
     }
 
     private void registerLifecycleEvents() {
         // Initialize backpack manager when server starts
         ServerLifecycleEvents.SERVER_STARTED.register(server -> {
+            try {
+                ModerationManager.initialize();
+            } catch (Exception e) {
+                LOGGER.error("Failed to initialize moderation database", e);
+                throw new IllegalStateException("Essentials moderation database could not be initialized", e);
+            }
             BackpackManager.initialize(server);
         });
 
@@ -131,6 +155,24 @@ public class Essentials implements ModInitializer {
             BackpackSeeCommand.finishAll();
             BackpackManager.saveAll(server);
             f1nal.essentials.command.OfflinePlayerDataManager.finishAll();
+            try {
+                ModerationManager.close();
+            } catch (java.sql.SQLException e) {
+                LOGGER.error("Failed to close moderation database", e);
+            }
+        });
+
+        // Authentication is complete here, but the player has not been placed
+        // into the world. The lookup is cache-only because this event runs on
+        // Netty's event loop.
+        ServerConfigurationConnectionEvents.BEFORE_CONFIGURE.register((handler, server) -> {
+            java.util.UUID playerId = handler.getOwner().id();
+            if (playerId == null) {
+                return;
+            }
+            ModerationManager.activeBan(playerId).ifPresent(ban ->
+                    handler.disconnect(f1nal.essentials.moderation.ModerationMessages.banDisconnect(
+                            ban, ModerationManager.get().nowMs())));
         });
 
         // Save and drop a player's cached backpack when they disconnect.

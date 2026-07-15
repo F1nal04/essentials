@@ -1,0 +1,11 @@
+{
+  "required": true,
+  "package": "f1nal.essentials.mixin",
+  "mixins": [
+    "BanPlayerCommandsMixin",
+    "KickCommandMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

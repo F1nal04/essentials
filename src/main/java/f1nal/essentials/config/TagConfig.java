@@ -6,7 +6,6 @@ import java.nio.file.Path;
 import java.util.Locale;
 import java.util.Map;
 
-import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.ChatFormatting;
 import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.Yaml;
@@ -26,7 +25,7 @@ public final class TagConfig {
     }
 
     public static TagConfig loadOrDefaults() {
-        Path cfg = FabricLoader.getInstance().getConfigDir().resolve("essentials.yaml");
+        Path cfg = ConfigPaths.configFile();
         if (!Files.exists(cfg)) {
             return defaults();
         }
@@ -88,5 +87,4 @@ public final class TagConfig {
         }
     }
 }
-
 

@@ -9,8 +9,6 @@ import java.util.Map;
 import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.Yaml;
 
-import net.fabricmc.loader.api.FabricLoader;
-
 public final class BackpackConfig {
 
     public enum Mode {
@@ -43,7 +41,7 @@ public final class BackpackConfig {
     }
 
     private static BackpackConfig load() {
-        Path cfg = FabricLoader.getInstance().getConfigDir().resolve("essentials.yaml");
+        Path cfg = ConfigPaths.configFile();
         if (!Files.exists(cfg)) {
             return defaults();
         }

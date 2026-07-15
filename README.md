@@ -25,6 +25,8 @@ The primary command is the configured command name. Aliases are shorter alternat
 | `/back` | None | Returns to your previous position after a TPA teleport. | Everyone |
 | `/inventorysee <player>` | `/isee` | Opens and edits an online or previously joined player's inventory. | Operators |
 | `/enderchestsee <player>` | `/esee` | Opens and edits an online or previously joined player's ender chest. | Operators |
+| `/ban <player> <duration> <reason>` | None | Temporarily bans a player. Durations accept values such as `30m`, `2h`, `7d`, and `1d12h`. | Operators |
+| `/kick <player> <reason>` | None | Disconnects an online player and records the moderation action. | Operators |
 
 `[target]` is optional. Defaults to executor.
 
@@ -46,6 +48,7 @@ The backpack has three modes, set via `backpack.mode` in the config:
 - **TPA System**: Full teleport request system with configurable timeouts, cooldowns, and smart request management
 - **Back Command**: Return to your previous position after TPA teleports with a configurable time window
 - **Admin Inventory Views**: `/inventorysee` and `/enderchestsee` give operators editable views into online and offline players' inventories and ender chests
+- **Persistent Moderation**: Timed bans and the always-on kick audit log are stored in SQLite and survive restarts
 
 ## Installation (Fabric)
 
@@ -53,17 +56,17 @@ The backpack has three modes, set via `backpack.mode` in the config:
 
 1. Install Fabric Loader for your server's Minecraft version.
 2. Download and place the built JAR of this mod into the `mods/` folder along with Fabric API.
-3. Start the server. Vanilla clients can connect. The mod will automatically generate a default configuration file at `config/essentials.yaml`.
+3. Start the server. Vanilla clients can connect. The mod will automatically generate `config/essentials/essentials.yaml` and `config/essentials/essentials.db`.
 
 ### Singleplayer
 
 1. Install Fabric Loader and Fabric API on your client.
 2. Place the mod JAR into your client `mods/` folder.
-3. Launch the game. The behavior applies in singleplayer because it runs an integrated server. The mod will automatically generate a default configuration file at `.minecraft/config/essentials.yaml`.
+3. Launch the game. The behavior applies in singleplayer because it runs an integrated server. The mod will automatically generate its files under `.minecraft/config/essentials/`.
 
 ## Configuration
 
-Essentials uses a YAML configuration file located at `.minecraft/config/essentials.yaml` (or in your server's config directory). If no configuration file exists, default settings will be used. After a mod update, new options are merged into your existing file automatically (see Automatic Config Migration above).
+Essentials uses `config/essentials/essentials.yaml` and stores moderation data in `config/essentials/essentials.db`. Existing `config/essentials.yaml` files are moved into the new folder automatically. If no configuration file exists, defaults are generated. After a mod update, new options are merged into your existing file automatically (see Automatic Config Migration above).
 
 ### Chat Tag
 
@@ -84,6 +87,13 @@ The TPA system includes the following configurable options:
 - `timeout_seconds` (default: 60) - How long teleport requests last before expiring
 - `cooldown_seconds` (default: 10) - How long to wait after cancelling a request before sending another
 - `window_seconds` for back command (default: 120) - Time window during which `/back` can be used after a TPA teleport
+
+### Moderation Configuration
+
+- `ban_message` controls the message shown to a banned player. It supports `{player}`, `{reason}`, `{moderator}`, `{time}`, and `{expires_at}`.
+- `kick_message` controls the message shown to a kicked player. It supports `{player}`, `{reason}`, and `{moderator}`.
+- Minecraft ampersand formatting codes such as `&c` and `&l` are supported.
+- Kick audit logging is always enabled and has no configuration switch.
 
 ### Command Access
 
