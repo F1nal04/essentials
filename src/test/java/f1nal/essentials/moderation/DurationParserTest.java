@@ -30,4 +30,10 @@ class DurationParserTest {
         assertEquals("1s", DurationParser.formatRemaining(1L));
         assertEquals("expired", DurationParser.formatRemaining(0L));
     }
+
+    @Test
+    void formatsFullStoredDurationForAuditHistory() {
+        assertEquals("1d 2h 30m 5s", DurationParser.formatDuration(95_405_000L));
+        assertEquals("0s", DurationParser.formatDuration(0L));
+    }
 }

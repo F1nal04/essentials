@@ -15,6 +15,7 @@ import f1nal.essentials.command.EnderChestSeeCommand;
 import f1nal.essentials.command.FeedCommand;
 import f1nal.essentials.command.FlightCommand;
 import f1nal.essentials.command.HealCommand;
+import f1nal.essentials.command.HistoryCommand;
 import f1nal.essentials.command.InventorySeeCommand;
 import f1nal.essentials.command.KickCommand;
 import f1nal.essentials.command.RepairCommand;
@@ -134,6 +135,13 @@ public class Essentials implements ModInitializer {
         if (kickSettings != null && kickSettings.enabled()) {
             CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment)
                     -> KickCommand.register(dispatcher, registryAccess, environment, kickSettings)
+            );
+        }
+
+        CommandSettings historySettings = commandSettings.get("history");
+        if (historySettings != null && historySettings.enabled()) {
+            CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment)
+                    -> HistoryCommand.register(dispatcher, registryAccess, environment, historySettings)
             );
         }
     }

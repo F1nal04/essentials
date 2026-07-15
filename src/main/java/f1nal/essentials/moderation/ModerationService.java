@@ -73,6 +73,11 @@ public final class ModerationService implements AutoCloseable {
         database.insertKick(targetUuid, targetName, reason, clock.millis(), moderator);
     }
 
+    public AuditPage history(UUID targetUuid, AuditFilter filter, int limit, int offset)
+            throws SQLException {
+        return database.loadHistory(targetUuid, filter, limit, offset);
+    }
+
     public long nowMs() {
         return clock.millis();
     }

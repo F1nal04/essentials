@@ -51,10 +51,19 @@ public final class DurationParser {
     }
 
     public static String formatRemaining(long remainingMillis) {
-        if (remainingMillis <= 0) {
-            return "expired";
+        return format(remainingMillis, 2, "expired");
+    }
+
+    /** Formats a stored moderation duration without dropping smaller non-zero units. */
+    public static String formatDuration(long durationMillis) {
+        return format(durationMillis, Integer.MAX_VALUE, "0s");
+    }
+
+    private static String format(long millis, int maxParts, String emptyValue) {
+        if (millis <= 0) {
+            return emptyValue;
         }
-        long totalSeconds = Math.floorDiv(remainingMillis - 1, 1_000L) + 1;
+        long totalSeconds = Math.floorDiv(millis - 1, 1_000L) + 1;
         long[] units = {604_800L, 86_400L, 3_600L, 60L, 1L};
         String[] suffixes = {"w", "d", "h", "m", "s"};
         List<String> parts = new ArrayList<>();
@@ -63,7 +72,7 @@ public final class DurationParser {
             if (amount > 0) {
                 parts.add(amount + suffixes[i]);
                 totalSeconds %= units[i];
-                if (parts.size() == 2) {
+                if (parts.size() == maxParts) {
                     break;
                 }
             }

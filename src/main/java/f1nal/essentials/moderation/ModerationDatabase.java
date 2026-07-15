@@ -18,7 +18,7 @@ import java.util.UUID;
 /** Owns the single SQLite connection and all moderation schema migrations. */
 public final class ModerationDatabase implements AutoCloseable {
 
-    private static final int CURRENT_SCHEMA_VERSION = 1;
+    private static final int CURRENT_SCHEMA_VERSION = 2;
 
     private final Connection connection;
     private final Clock clock;
@@ -121,6 +121,24 @@ public final class ModerationDatabase implements AutoCloseable {
                 try (PreparedStatement statement = connection.prepareStatement(
                         "INSERT INTO schema_migrations(version, applied_at_ms) VALUES (?, ?)")) {
                     statement.setInt(1, 1);
+                    statement.setLong(2, clock.millis());
+                    statement.executeUpdate();
+                }
+                return null;
+            });
+            version = 1;
+        }
+        if (version == 1) {
+            inTransaction(() -> {
+                try (Statement statement = connection.createStatement()) {
+                    statement.execute("""
+                            CREATE INDEX bans_target_time
+                            ON bans(target_uuid, issued_at_ms DESC)
+                            """);
+                }
+                try (PreparedStatement statement = connection.prepareStatement(
+                        "INSERT INTO schema_migrations(version, applied_at_ms) VALUES (?, ?)")) {
+                    statement.setInt(1, 2);
                     statement.setLong(2, clock.millis());
                     statement.executeUpdate();
                 }
@@ -233,6 +251,107 @@ public final class ModerationDatabase implements AutoCloseable {
         }
     }
 
+    public synchronized AuditPage loadHistory(
+            UUID targetUuid,
+            AuditFilter filter,
+            int limit,
+            int offset) throws SQLException {
+        if (limit <= 0) {
+            throw new IllegalArgumentException("History page size must be positive");
+        }
+        if (offset < 0) {
+            throw new IllegalArgumentException("History offset cannot be negative");
+        }
+
+        return inTransaction(() -> {
+            expireBans(clock.millis());
+            long totalRecords = countHistory(targetUuid, filter);
+            return new AuditPage(queryHistory(targetUuid, filter, limit, offset), totalRecords);
+        });
+    }
+
+    private long countHistory(UUID targetUuid, AuditFilter filter) throws SQLException {
+        String sql = switch (filter) {
+            case ALL -> """
+                    SELECT
+                        (SELECT COUNT(*) FROM bans WHERE target_uuid = ?)
+                        + (SELECT COUNT(*) FROM kicks WHERE target_uuid = ?)
+                    """;
+            case BANS -> "SELECT COUNT(*) FROM bans WHERE target_uuid = ?";
+            case KICKS -> "SELECT COUNT(*) FROM kicks WHERE target_uuid = ?";
+        };
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, targetUuid.toString());
+            if (filter == AuditFilter.ALL) {
+                statement.setString(2, targetUuid.toString());
+            }
+            try (ResultSet result = statement.executeQuery()) {
+                return result.next() ? result.getLong(1) : 0;
+            }
+        }
+    }
+
+    private List<AuditRecord> queryHistory(
+            UUID targetUuid,
+            AuditFilter filter,
+            int limit,
+            int offset) throws SQLException {
+        String sql = switch (filter) {
+            case ALL -> """
+                    SELECT id, action, target_uuid, target_name, reason, occurred_at_ms,
+                           expires_at_ms, moderator_uuid, moderator_name, state
+                    FROM (
+                        SELECT id, 'BAN' AS action, target_uuid, target_name, reason,
+                               issued_at_ms AS occurred_at_ms, expires_at_ms,
+                               moderator_uuid, moderator_name, state
+                        FROM bans WHERE target_uuid = ?
+                        UNION ALL
+                        SELECT id, 'KICK' AS action, target_uuid, target_name, reason,
+                               kicked_at_ms AS occurred_at_ms, NULL AS expires_at_ms,
+                               moderator_uuid, moderator_name, NULL AS state
+                        FROM kicks WHERE target_uuid = ?
+                    )
+                    ORDER BY occurred_at_ms DESC, id DESC, action ASC
+                    LIMIT ? OFFSET ?
+                    """;
+            case BANS -> """
+                    SELECT id, 'BAN' AS action, target_uuid, target_name, reason,
+                           issued_at_ms AS occurred_at_ms, expires_at_ms,
+                           moderator_uuid, moderator_name, state
+                    FROM bans
+                    WHERE target_uuid = ?
+                    ORDER BY occurred_at_ms DESC, id DESC
+                    LIMIT ? OFFSET ?
+                    """;
+            case KICKS -> """
+                    SELECT id, 'KICK' AS action, target_uuid, target_name, reason,
+                           kicked_at_ms AS occurred_at_ms, NULL AS expires_at_ms,
+                           moderator_uuid, moderator_name, NULL AS state
+                    FROM kicks
+                    WHERE target_uuid = ?
+                    ORDER BY occurred_at_ms DESC, id DESC
+                    LIMIT ? OFFSET ?
+                    """;
+        };
+
+        List<AuditRecord> records = new ArrayList<>();
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            int parameter = 1;
+            statement.setString(parameter++, targetUuid.toString());
+            if (filter == AuditFilter.ALL) {
+                statement.setString(parameter++, targetUuid.toString());
+            }
+            statement.setInt(parameter++, limit);
+            statement.setInt(parameter, offset);
+            try (ResultSet result = statement.executeQuery()) {
+                while (result.next()) {
+                    records.add(readAuditRecord(result));
+                }
+            }
+        }
+        return records;
+    }
+
     synchronized long countKicks(UUID targetUuid) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement(
                 "SELECT COUNT(*) FROM kicks WHERE target_uuid = ?")) {
@@ -271,6 +390,27 @@ public final class ModerationDatabase implements AutoCloseable {
                     result.getString("moderator_name"));
         } catch (IllegalArgumentException e) {
             throw new SQLException("Database contains an invalid moderation UUID", e);
+        }
+    }
+
+    private static AuditRecord readAuditRecord(ResultSet result) throws SQLException {
+        try {
+            String moderator = result.getString("moderator_uuid");
+            long expiration = result.getLong("expires_at_ms");
+            Long expiresAtMs = result.wasNull() ? null : expiration;
+            return new AuditRecord(
+                    result.getLong("id"),
+                    AuditRecord.Action.valueOf(result.getString("action")),
+                    UUID.fromString(result.getString("target_uuid")),
+                    result.getString("target_name"),
+                    result.getString("reason"),
+                    result.getLong("occurred_at_ms"),
+                    expiresAtMs,
+                    moderator == null ? null : UUID.fromString(moderator),
+                    result.getString("moderator_name"),
+                    result.getString("state"));
+        } catch (IllegalArgumentException e) {
+            throw new SQLException("Database contains an invalid moderation history value", e);
         }
     }
 

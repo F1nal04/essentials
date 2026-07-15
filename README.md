@@ -27,6 +27,7 @@ The primary command is the configured command name. Aliases are shorter alternat
 | `/enderchestsee <player>` | `/esee` | Opens and edits an online or previously joined player's ender chest. | Operators |
 | `/ban <player> <duration> <reason>` | None | Temporarily bans a player. Durations accept values such as `30m`, `2h`, `7d`, and `1d12h`. | Operators |
 | `/kick <player> <reason>` | None | Disconnects an online player and records the moderation action. | Operators |
+| `/history <player> [all\|bans\|kicks] [page]` | `/audit` | Shows paginated kick and ban history with its time, duration, moderator, reason, and ban status. | Operators |
 
 `[target]` is optional. Defaults to executor.
 
@@ -48,7 +49,7 @@ The backpack has three modes, set via `backpack.mode` in the config:
 - **TPA System**: Full teleport request system with configurable timeouts, cooldowns, and smart request management
 - **Back Command**: Return to your previous position after TPA teleports with a configurable time window
 - **Admin Inventory Views**: `/inventorysee` and `/enderchestsee` give operators editable views into online and offline players' inventories and ender chests
-- **Persistent Moderation**: Timed bans and the always-on kick audit log are stored in SQLite and survive restarts
+- **Persistent Moderation**: Timed bans and the always-on kick audit log are stored in SQLite, survive restarts, and can be reviewed with `/history` or `/audit`
 
 ## Installation (Fabric)
 
@@ -94,6 +95,7 @@ The TPA system includes the following configurable options:
 - `kick_message` controls the message shown to a kicked player. It supports `{player}`, `{reason}`, and `{moderator}`.
 - Minecraft ampersand formatting codes such as `&c` and `&l` are supported.
 - Kick audit logging is always enabled and has no configuration switch.
+- `/history <player>` shows all moderation entries; add `bans` or `kicks` to filter them and a page number to navigate older entries (10 per page). `/audit` is an alias.
 
 ### Command Access
 

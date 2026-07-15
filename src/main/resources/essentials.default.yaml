@@ -71,3 +71,6 @@ commands:
   kick:
     enabled: true
     access: "op"
+  history:
+    enabled: true
+    access: "op"
