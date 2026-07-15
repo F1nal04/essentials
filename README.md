@@ -25,9 +25,9 @@ The primary command is the configured command name. Aliases are shorter alternat
 | `/back` | None | Returns to your previous position after a TPA teleport. | Everyone |
 | `/inventorysee <player>` | `/isee` | Opens and edits an online or previously joined player's inventory. | Operators |
 | `/enderchestsee <player>` | `/esee` | Opens and edits an online or previously joined player's ender chest. | Operators |
-| `/ban <player> <duration> <reason>` | None | Temporarily bans a player. Durations accept values such as `30m`, `2h`, `7d`, and `1d12h`. | Operators |
+| `/ban <player> <duration> <reason>` | None | Temporarily bans an online or previously known offline player. Durations accept values such as `30m`, `2h`, `7d`, and `1d12h`. | Operators |
 | `/kick <player> <reason>` | None | Disconnects an online player and records the moderation action. | Operators |
-| `/history <player> [all\|bans\|kicks] [page]` | `/audit` | Shows paginated kick and ban history with its time, duration, moderator, reason, and ban status. | Operators |
+| `/history <player> [all\|bans\|kicks] [page]` | `/audit` | Shows paginated moderation history for online or previously known offline players, including any active ban. | Operators |
 
 `[target]` is optional. Defaults to executor.
 
@@ -95,7 +95,7 @@ The TPA system includes the following configurable options:
 - `kick_message` controls the message shown to a kicked player. It supports `{player}`, `{reason}`, and `{moderator}`.
 - Minecraft ampersand formatting codes such as `&c` and `&l` are supported.
 - Kick audit logging is always enabled and has no configuration switch.
-- `/history <player>` shows all moderation entries; add `bans` or `kicks` to filter them and a page number to navigate older entries (10 per page). `/audit` is an alias.
+- `/history <player>` shows all moderation entries and any active ban; add `bans` or `kicks` to filter them and a page number to navigate older entries (10 per page). `/audit` is an alias. Dates use `DD/MM/YYYY` in the server's timezone.
 
 ### Command Access
 

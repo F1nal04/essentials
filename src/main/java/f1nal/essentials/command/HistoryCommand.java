@@ -3,6 +3,7 @@ package f1nal.essentials.command;
 import java.sql.SQLException;
 import java.time.ZoneId;
 import java.util.Collection;
+import java.util.Optional;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
@@ -16,6 +17,7 @@ import f1nal.essentials.moderation.AuditEntryFormatter;
 import f1nal.essentials.moderation.AuditFilter;
 import f1nal.essentials.moderation.AuditPage;
 import f1nal.essentials.moderation.AuditRecord;
+import f1nal.essentials.moderation.BanRecord;
 import f1nal.essentials.moderation.ModerationManager;
 import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
@@ -98,8 +100,13 @@ public final class HistoryCommand {
         NameAndId target = targets.iterator().next();
         int offset = (pageNumber - 1) * PAGE_SIZE;
         AuditPage page;
+        Optional<BanRecord> activeBan;
+        long nowMs;
         try {
-            page = ModerationManager.get().history(target.id(), filter, PAGE_SIZE, offset);
+            var moderation = ModerationManager.get();
+            page = moderation.history(target.id(), filter, PAGE_SIZE, offset);
+            activeBan = moderation.activeBan(target.id());
+            nowMs = moderation.nowMs();
         } catch (SQLException | IllegalStateException e) {
             Essentials.LOGGER.error("Failed to read moderation history for {}", target.id(), e);
             source.sendFailure(Messages.error("The moderation history could not be loaded."));
@@ -120,15 +127,19 @@ public final class HistoryCommand {
                         + " — " + filter.argumentValue()
                         + " — page " + pageNumber + "/" + totalPages
                         + " (" + page.totalRecords() + " records)"), false);
+        ZoneId serverZone = ZoneId.systemDefault();
+        activeBan.ifPresent(ban -> source.sendSuccess(
+                () -> Messages.custom(AuditEntryFormatter.formatActiveBan(ban, nowMs, serverZone)),
+                false));
         if (page.records().isEmpty()) {
             source.sendSuccess(() -> Messages.info("No matching moderation records."), false);
             return 1;
         }
 
-        ZoneId serverZone = ZoneId.systemDefault();
         for (AuditRecord record : page.records()) {
             source.sendSuccess(
-                    () -> Messages.info(AuditEntryFormatter.format(record, serverZone)), false);
+                    () -> Messages.custom(AuditEntryFormatter.formatComponent(record, serverZone)),
+                    false);
         }
         return page.records().size();
     }

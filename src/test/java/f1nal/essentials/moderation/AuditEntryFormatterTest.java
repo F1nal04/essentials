@@ -26,7 +26,7 @@ class AuditEntryFormatterTest {
                 "EXPIRED");
 
         assertEquals(
-                "[BAN] When: 1970-01-01 00:00:00 Z | Duration: 1h 30m"
+                "[BAN] When: 01/01/1970 00:00:00 Z | Duration: 1h 30m"
                         + " | By: CONSOLE | Reason: Griefing | Status: expired",
                 AuditEntryFormatter.format(ban, ZoneOffset.UTC));
     }
@@ -46,8 +46,26 @@ class AuditEntryFormatterTest {
                 null);
 
         assertEquals(
-                "[KICK] When: 1970-01-01 00:01:00 Z | Duration: n/a (instant action)"
+                "[KICK] When: 01/01/1970 00:01:00 Z | Duration: n/a (instant action)"
                         + " | By: Moderator | Reason: Spam",
                 AuditEntryFormatter.format(kick, ZoneOffset.UTC));
+    }
+
+    @Test
+    void formatsActiveBanBanner() {
+        BanRecord ban = new BanRecord(
+                3,
+                TARGET,
+                "Target",
+                "Active reason",
+                0,
+                5_400_000L,
+                null,
+                "CONSOLE");
+
+        assertEquals(
+                "ACTIVE BAN | Remaining: 1h 30m | Expires: 01/01/1970 01:30:00 Z"
+                        + " | By: CONSOLE | Reason: Active reason",
+                AuditEntryFormatter.formatActiveBan(ban, 0, ZoneOffset.UTC).getString());
     }
 }
