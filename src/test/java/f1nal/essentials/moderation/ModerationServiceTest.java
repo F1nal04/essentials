@@ -1,5 +1,6 @@
 package f1nal.essentials.moderation;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Path;
@@ -52,6 +53,40 @@ class ModerationServiceTest {
             assertTrue(service.activeBan(target).isEmpty());
             assertTrue(service.activeIpBan("192.0.2.10").isEmpty());
             assertTrue(service.activeIpBans(target).isEmpty());
+        }
+    }
+
+    @Test
+    void pardonRevokesPersistedBanAndClearsActiveCache() throws Exception {
+        MutableClock clock = new MutableClock(30_000L);
+        UUID target = UUID.randomUUID();
+        Moderator moderator = new Moderator(null, "CONSOLE");
+
+        try (ModerationService service = ModerationService.open(
+                tempDir.resolve("essentials.db"), clock)) {
+            assertTrue(service.ban(
+                    target, "Target", "Reason", 10_000L, moderator).isPresent());
+            assertTrue(service.pardon(target, moderator));
+            assertTrue(service.activeBan(target).isEmpty());
+            assertFalse(service.pardon(target, moderator));
+        }
+    }
+
+    @Test
+    void pardonIpRevokesOnlyIpBanAndClearsItsCache() throws Exception {
+        MutableClock clock = new MutableClock(40_000L);
+        UUID target = UUID.randomUUID();
+        Moderator moderator = new Moderator(null, "CONSOLE");
+
+        try (ModerationService service = ModerationService.open(
+                tempDir.resolve("essentials.db"), clock)) {
+            assertTrue(service.banPlayerIp(
+                    "2001:db8::30", target, "Target", "Proxy", 10_000L, moderator)
+                    .isPresent());
+            assertTrue(service.pardonIp("2001:0db8:0:0:0:0:0:30", moderator));
+            assertTrue(service.activeIpBan("2001:db8::30").isEmpty());
+            assertTrue(service.activeBan(target).isPresent());
+            assertFalse(service.pardonIp("2001:db8::30", moderator));
         }
     }
 

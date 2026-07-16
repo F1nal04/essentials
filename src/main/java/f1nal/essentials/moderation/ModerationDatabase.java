@@ -183,6 +183,31 @@ public final class ModerationDatabase implements AutoCloseable {
         });
     }
 
+    public synchronized boolean revokeBan(
+            UUID targetUuid,
+            long revokedAtMs,
+            Moderator moderator) throws SQLException {
+        return inTransaction(() -> {
+            expireBans(revokedAtMs);
+            Optional<BanRecord> activeBan = findActivePlayerBan(targetUuid);
+            if (activeBan.isEmpty()) {
+                return false;
+            }
+            try (PreparedStatement statement = connection.prepareStatement("""
+                    UPDATE bans
+                    SET state = 'REVOKED', revoked_at_ms = ?,
+                        revoked_by_uuid = ?, revoked_by_name = ?
+                    WHERE id = ? AND state = 'ACTIVE'
+                    """)) {
+                statement.setLong(1, revokedAtMs);
+                setNullableUuid(statement, 2, moderator.uuid());
+                statement.setString(3, moderator.name());
+                statement.setLong(4, activeBan.get().id());
+                return statement.executeUpdate() == 1;
+            }
+        });
+    }
+
     public synchronized List<IpBanRecord> loadActiveIpBans(long nowMs) throws SQLException {
         return inTransaction(() -> {
             expireIpBans(nowMs);
@@ -220,6 +245,31 @@ public final class ModerationDatabase implements AutoCloseable {
             return Optional.of(insertIpBanRow(
                     address, targetUuid, targetName, reason,
                     issuedAtMs, expiresAtMs, moderator));
+        });
+    }
+
+    public synchronized boolean revokeIpBan(
+            String address,
+            long revokedAtMs,
+            Moderator moderator) throws SQLException {
+        return inTransaction(() -> {
+            expireIpBans(revokedAtMs);
+            Optional<IpBanRecord> activeBan = findActiveIpBan(address);
+            if (activeBan.isEmpty()) {
+                return false;
+            }
+            try (PreparedStatement statement = connection.prepareStatement("""
+                    UPDATE ip_bans
+                    SET state = 'REVOKED', revoked_at_ms = ?,
+                        revoked_by_uuid = ?, revoked_by_name = ?
+                    WHERE id = ? AND state = 'ACTIVE'
+                    """)) {
+                statement.setLong(1, revokedAtMs);
+                setNullableUuid(statement, 2, moderator.uuid());
+                statement.setString(3, moderator.name());
+                statement.setLong(4, activeBan.get().id());
+                return statement.executeUpdate() == 1;
+            }
         });
     }
 
@@ -428,21 +478,26 @@ public final class ModerationDatabase implements AutoCloseable {
         String sql = switch (filter) {
             case ALL -> """
                     SELECT id, action, target_uuid, target_name, address, reason, occurred_at_ms,
-                           expires_at_ms, moderator_uuid, moderator_name, state
+                           expires_at_ms, moderator_uuid, moderator_name, state,
+                           revoked_at_ms, revoked_by_uuid, revoked_by_name
                     FROM (
                         SELECT id, 'BAN' AS action, target_uuid, target_name, NULL AS address, reason,
                                issued_at_ms AS occurred_at_ms, expires_at_ms,
-                               moderator_uuid, moderator_name, state
+                               moderator_uuid, moderator_name, state,
+                               revoked_at_ms, revoked_by_uuid, revoked_by_name
                         FROM bans WHERE target_uuid = ?
                         UNION ALL
                         SELECT id, 'KICK' AS action, target_uuid, target_name, NULL AS address, reason,
                                kicked_at_ms AS occurred_at_ms, NULL AS expires_at_ms,
-                               moderator_uuid, moderator_name, NULL AS state
+                               moderator_uuid, moderator_name, NULL AS state,
+                               NULL AS revoked_at_ms, NULL AS revoked_by_uuid,
+                               NULL AS revoked_by_name
                         FROM kicks WHERE target_uuid = ?
                         UNION ALL
                         SELECT id, 'IP_BAN' AS action, target_uuid, target_name, address, reason,
                                issued_at_ms AS occurred_at_ms, expires_at_ms,
-                               moderator_uuid, moderator_name, state
+                               moderator_uuid, moderator_name, state,
+                               revoked_at_ms, revoked_by_uuid, revoked_by_name
                         FROM ip_bans WHERE target_uuid = ?
                     )
                     ORDER BY occurred_at_ms DESC, id DESC, action ASC
@@ -450,16 +505,19 @@ public final class ModerationDatabase implements AutoCloseable {
                     """;
             case BANS -> """
                     SELECT id, action, target_uuid, target_name, address, reason, occurred_at_ms,
-                           expires_at_ms, moderator_uuid, moderator_name, state
+                           expires_at_ms, moderator_uuid, moderator_name, state,
+                           revoked_at_ms, revoked_by_uuid, revoked_by_name
                     FROM (
                         SELECT id, 'BAN' AS action, target_uuid, target_name,
                                NULL AS address, reason, issued_at_ms AS occurred_at_ms,
-                               expires_at_ms, moderator_uuid, moderator_name, state
+                               expires_at_ms, moderator_uuid, moderator_name, state,
+                               revoked_at_ms, revoked_by_uuid, revoked_by_name
                         FROM bans WHERE target_uuid = ?
                         UNION ALL
                         SELECT id, 'IP_BAN' AS action, target_uuid, target_name,
                                address, reason, issued_at_ms AS occurred_at_ms,
-                               expires_at_ms, moderator_uuid, moderator_name, state
+                               expires_at_ms, moderator_uuid, moderator_name, state,
+                               revoked_at_ms, revoked_by_uuid, revoked_by_name
                         FROM ip_bans WHERE target_uuid = ?
                     )
                     ORDER BY occurred_at_ms DESC, id DESC, action ASC
@@ -468,7 +526,9 @@ public final class ModerationDatabase implements AutoCloseable {
             case KICKS -> """
                     SELECT id, 'KICK' AS action, target_uuid, target_name, NULL AS address, reason,
                            kicked_at_ms AS occurred_at_ms, NULL AS expires_at_ms,
-                           moderator_uuid, moderator_name, NULL AS state
+                           moderator_uuid, moderator_name, NULL AS state,
+                           NULL AS revoked_at_ms, NULL AS revoked_by_uuid,
+                           NULL AS revoked_by_name
                     FROM kicks
                     WHERE target_uuid = ?
                     ORDER BY occurred_at_ms DESC, id DESC
@@ -570,6 +630,9 @@ public final class ModerationDatabase implements AutoCloseable {
             String moderator = result.getString("moderator_uuid");
             long expiration = result.getLong("expires_at_ms");
             Long expiresAtMs = result.wasNull() ? null : expiration;
+            long revocation = result.getLong("revoked_at_ms");
+            Long revokedAtMs = result.wasNull() ? null : revocation;
+            String revokedBy = result.getString("revoked_by_uuid");
             return new AuditRecord(
                     result.getLong("id"),
                     AuditRecord.Action.valueOf(result.getString("action")),
@@ -581,7 +644,10 @@ public final class ModerationDatabase implements AutoCloseable {
                     expiresAtMs,
                     moderator == null ? null : UUID.fromString(moderator),
                     result.getString("moderator_name"),
-                    result.getString("state"));
+                    result.getString("state"),
+                    revokedAtMs,
+                    revokedBy == null ? null : UUID.fromString(revokedBy),
+                    result.getString("revoked_by_name"));
         } catch (IllegalArgumentException e) {
             throw new SQLException("Database contains an invalid moderation history value", e);
         }

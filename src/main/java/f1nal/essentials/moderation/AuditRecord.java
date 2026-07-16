@@ -13,7 +13,10 @@ public record AuditRecord(
         Long expiresAtMs,
         UUID moderatorUuid,
         String moderatorName,
-        String state) {
+        String state,
+        Long revokedAtMs,
+        UUID revokedByUuid,
+        String revokedByName) {
 
     public enum Action {
         BAN,

@@ -52,6 +52,12 @@ public final class AuditEntryFormatter {
                     .append(Component.literal(record.state().toLowerCase(Locale.ROOT))
                             .withStyle(statusColor(record.state())));
         }
+        if (record.revokedAtMs() != null) {
+            line.append(label(" | Revoked: "))
+                    .append(value(timestamp.format(Instant.ofEpochMilli(record.revokedAtMs()))))
+                    .append(label(" | Revoked by: "))
+                    .append(value(record.revokedByName()));
+        }
         return line;
     }
 

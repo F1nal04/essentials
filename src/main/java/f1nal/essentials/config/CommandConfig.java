@@ -77,7 +77,9 @@ public final class CommandConfig {
         defaults.put("enderchestsee", new CommandSettings(true, "op"));
         defaults.put("inventorysee", new CommandSettings(true, "op"));
         defaults.put("ban", new CommandSettings(true, "op"));
+        defaults.put("pardon", new CommandSettings(true, "op"));
         defaults.put("banip", new CommandSettings(true, "op"));
+        defaults.put("pardonip", new CommandSettings(true, "op"));
         defaults.put("kick", new CommandSettings(true, "op"));
         defaults.put("history", new CommandSettings(true, "op"));
         return defaults;

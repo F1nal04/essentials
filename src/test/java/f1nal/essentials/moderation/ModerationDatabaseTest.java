@@ -1,6 +1,7 @@
 package f1nal.essentials.moderation;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Path;
@@ -56,6 +57,34 @@ class ModerationDatabaseTest {
             assertTrue(database.loadActiveBans(2_000L).isEmpty());
             assertTrue(database.insertBan(
                     target, "Target", "New", 2_000L, 3_000L, moderator).isPresent());
+        }
+    }
+
+    @Test
+    void revokesActiveBanAndPreservesAuditDetails() throws Exception {
+        UUID target = UUID.randomUUID();
+        Moderator issuer = new Moderator(null, "CONSOLE");
+        Moderator revoker = new Moderator(UUID.randomUUID(), "Moderator");
+
+        try (ModerationDatabase database = ModerationDatabase.open(
+                tempDir.resolve("essentials.db"), CLOCK)) {
+            assertTrue(database.insertBan(
+                    target, "Target", "Reason",
+                    1_000_000L, 2_000_000L, issuer).isPresent());
+            assertTrue(database.revokeBan(target, 1_100_000L, revoker));
+            assertTrue(database.loadActiveBans(1_100_000L).isEmpty());
+            assertFalse(database.revokeBan(target, 1_200_000L, revoker));
+
+            AuditRecord record = database.loadHistory(
+                    target, AuditFilter.BANS, 10, 0).records().getFirst();
+            assertEquals("REVOKED", record.state());
+            assertEquals(1_100_000L, record.revokedAtMs());
+            assertEquals(revoker.uuid(), record.revokedByUuid());
+            assertEquals("Moderator", record.revokedByName());
+
+            assertTrue(database.insertBan(
+                    target, "Target", "Replacement",
+                    1_200_000L, 2_200_000L, issuer).isPresent());
         }
     }
 
@@ -119,6 +148,31 @@ class ModerationDatabaseTest {
             assertEquals(AuditRecord.Action.IP_BAN, history.records().getFirst().action());
             assertEquals("2001:db8::1", history.records().getFirst().address());
             assertEquals("EXPIRED", history.records().getFirst().state());
+        }
+    }
+
+    @Test
+    void revokesActiveIpBanAndPreservesAuditDetails() throws Exception {
+        UUID target = UUID.randomUUID();
+        Moderator issuer = new Moderator(null, "CONSOLE");
+        Moderator revoker = new Moderator(UUID.randomUUID(), "Moderator");
+
+        try (ModerationDatabase database = ModerationDatabase.open(
+                tempDir.resolve("essentials.db"), CLOCK)) {
+            assertTrue(database.insertIpBan(
+                    "2001:db8::20", target, "Target", "Proxy",
+                    1_000_000L, 2_000_000L, issuer).isPresent());
+            assertTrue(database.revokeIpBan("2001:db8::20", 1_100_000L, revoker));
+            assertTrue(database.loadActiveIpBans(1_100_000L).isEmpty());
+            assertFalse(database.revokeIpBan("2001:db8::20", 1_200_000L, revoker));
+
+            AuditRecord record = database.loadHistory(
+                    target, AuditFilter.BANS, 10, 0).records().getFirst();
+            assertEquals(AuditRecord.Action.IP_BAN, record.action());
+            assertEquals("REVOKED", record.state());
+            assertEquals(1_100_000L, record.revokedAtMs());
+            assertEquals(revoker.uuid(), record.revokedByUuid());
+            assertEquals("Moderator", record.revokedByName());
         }
     }
 

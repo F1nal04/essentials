@@ -26,7 +26,9 @@ The primary command is the configured command name. Aliases are shorter alternat
 | `/inventorysee <player>` | `/isee` | Opens and edits an online or previously joined player's inventory. | Operators |
 | `/enderchestsee <player>` | `/esee` | Opens and edits an online or previously joined player's ender chest. | Operators |
 | `/ban <player> <duration> <reason>` | None | Temporarily bans an online or previously known offline player. Durations accept values such as `30m`, `2h`, `7d`, and `1d12h`. | Operators |
+| `/pardon <player>` | `/unban` | Revokes an active player-account ban for an online or previously known offline player. | Operators |
 | `/ban-ip <address-or-player> <duration> <reason>` | `/banip` | Temporarily bans an IPv4/IPv6 address. IPv6 addresses must be quoted. An online player target bans both their account and current address. | Operators |
+| `/pardon-ip <address>` | `/unban-ip` | Revokes an active IP ban. IPv6 addresses must be quoted. | Operators |
 | `/kick <player> <reason>` | None | Disconnects an online player and records the moderation action. | Operators |
 | `/history <player> [all\|bans\|kicks] [page]` | `/audit` | Shows paginated moderation history for online or previously known offline players, including any active ban. | Operators |
 
@@ -98,6 +100,8 @@ The TPA system includes the following configurable options:
 - Minecraft ampersand formatting codes such as `&c` and `&l` are supported.
 - Kick audit logging is always enabled and has no configuration switch.
 - `/history <player>` shows all moderation entries and any active ban; add `bans` or `kicks` to filter them and a page number to navigate older entries (10 per page). `/audit` is an alias. Dates use `DD/MM/YYYY` in the server's timezone.
+- `/pardon <player>` (alias `/unban`) revokes only the active player-account ban. It does not revoke a separate IP ban.
+- `/pardon-ip <address>` (alias `/unban-ip`) revokes only the active IP ban. IPv6 addresses must be quoted.
 
 ### Command Access
 

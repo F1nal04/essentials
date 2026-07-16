@@ -5,6 +5,8 @@
     "BanPlayerCommandsMixin",
     "BanIpCommandsMixin",
     "KickCommandMixin",
+    "PardonCommandMixin",
+    "PardonIpCommandMixin",
     "ServerCommonPacketListenerAccessor"
   ],
   "injectors": {

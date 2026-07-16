@@ -14,7 +14,8 @@ class CommandConfigTest {
 
     private static final java.util.Set<String> KNOWN = java.util.Set.of(
             "repair", "heal", "feed", "flight", "disposal", "tpa", "back", "backpack", "backpacksee",
-            "enderchestsee", "inventorysee", "ban", "banip", "kick", "history");
+            "enderchestsee", "inventorysee", "ban", "pardon", "banip", "pardonip", "kick",
+            "history");
 
     @Test
     void missingSectionGivesAllDefaults() {
@@ -24,7 +25,9 @@ class CommandConfigTest {
         assertEquals(new CommandSettings(true, "all"), m.get("backpack"));
         assertEquals(new CommandSettings(true, "op"), m.get("backpacksee"));
         assertEquals(new CommandSettings(true, "op"), m.get("ban"));
+        assertEquals(new CommandSettings(true, "op"), m.get("pardon"));
         assertEquals(new CommandSettings(true, "op"), m.get("banip"));
+        assertEquals(new CommandSettings(true, "op"), m.get("pardonip"));
         assertEquals(new CommandSettings(true, "op"), m.get("kick"));
         assertEquals(new CommandSettings(true, "op"), m.get("history"));
     }

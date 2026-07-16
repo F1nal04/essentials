@@ -19,6 +19,8 @@ import f1nal.essentials.command.HealCommand;
 import f1nal.essentials.command.HistoryCommand;
 import f1nal.essentials.command.InventorySeeCommand;
 import f1nal.essentials.command.KickCommand;
+import f1nal.essentials.command.PardonCommand;
+import f1nal.essentials.command.PardonIpCommand;
 import f1nal.essentials.command.RepairCommand;
 import f1nal.essentials.command.TpaCommands;
 import f1nal.essentials.config.CommandConfig;
@@ -134,10 +136,25 @@ public class Essentials implements ModInitializer {
             );
         }
 
+        CommandSettings pardonSettings = commandSettings.get("pardon");
+        if (pardonSettings != null && pardonSettings.enabled()) {
+            CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment)
+                    -> PardonCommand.register(dispatcher, registryAccess, environment, pardonSettings)
+            );
+        }
+
         CommandSettings banIpSettings = commandSettings.get("banip");
         if (banIpSettings != null && banIpSettings.enabled()) {
             CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment)
                     -> BanIpCommand.register(dispatcher, registryAccess, environment, banIpSettings)
+            );
+        }
+
+        CommandSettings pardonIpSettings = commandSettings.get("pardonip");
+        if (pardonIpSettings != null && pardonIpSettings.enabled()) {
+            CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment)
+                    -> PardonIpCommand.register(
+                            dispatcher, registryAccess, environment, pardonIpSettings)
             );
         }
 

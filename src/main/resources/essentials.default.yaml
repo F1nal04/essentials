@@ -68,7 +68,13 @@ commands:
   ban:
     enabled: true
     access: "op"
+  pardon:
+    enabled: true
+    access: "op"
   banip:
+    enabled: true
+    access: "op"
+  pardonip:
     enabled: true
     access: "op"
   kick:

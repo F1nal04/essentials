@@ -74,6 +74,14 @@ public final class ModerationService implements AutoCloseable {
         return Optional.of(ban);
     }
 
+    public boolean pardon(UUID targetUuid, Moderator moderator) throws SQLException {
+        boolean revoked = database.revokeBan(targetUuid, clock.millis(), moderator);
+        if (revoked) {
+            activeBans.remove(targetUuid);
+        }
+        return revoked;
+    }
+
     public Optional<IpBanRecord> banIp(
             String address,
             String reason,
@@ -107,6 +115,16 @@ public final class ModerationService implements AutoCloseable {
             activeIpBans.put(normalizedAddress, result.ipBan());
         });
         return inserted;
+    }
+
+    public boolean pardonIp(String address, Moderator moderator) throws SQLException {
+        String normalizedAddress = IpAddressUtil.normalizeLiteral(address);
+        boolean revoked = database.revokeIpBan(
+                normalizedAddress, clock.millis(), moderator);
+        if (revoked) {
+            activeIpBans.remove(normalizedAddress);
+        }
+        return revoked;
     }
 
     public Optional<IpBanRecord> activeIpBan(String address) {

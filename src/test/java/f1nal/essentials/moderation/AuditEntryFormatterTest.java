@@ -24,7 +24,10 @@ class AuditEntryFormatterTest {
                 5_400_000L,
                 null,
                 "CONSOLE",
-                "EXPIRED");
+                "EXPIRED",
+                null,
+                null,
+                null);
 
         assertEquals(
                 "[BAN] When: 01/01/1970 00:00:00 Z | Duration: 1h 30m"
@@ -45,6 +48,9 @@ class AuditEntryFormatterTest {
                 null,
                 UUID.fromString("00000000-0000-0000-0000-000000000002"),
                 "Moderator",
+                null,
+                null,
+                null,
                 null);
 
         assertEquals(
@@ -84,7 +90,10 @@ class AuditEntryFormatterTest {
                 3_600_000L,
                 null,
                 "CONSOLE",
-                "ACTIVE");
+                "ACTIVE",
+                null,
+                null,
+                null);
 
         assertEquals(
                 "[IP BAN] When: 01/01/1970 00:00:00 Z | Duration: 1h"
@@ -94,9 +103,34 @@ class AuditEntryFormatterTest {
     }
 
     @Test
+    void formatsBanRevocationDetails() {
+        AuditRecord ban = new AuditRecord(
+                5,
+                AuditRecord.Action.BAN,
+                TARGET,
+                "Target",
+                null,
+                "Griefing",
+                0,
+                5_400_000L,
+                null,
+                "CONSOLE",
+                "REVOKED",
+                60_000L,
+                UUID.fromString("00000000-0000-0000-0000-000000000002"),
+                "Moderator");
+
+        assertEquals(
+                "[BAN] When: 01/01/1970 00:00:00 Z | Duration: 1h 30m"
+                        + " | By: CONSOLE | Reason: Griefing | Status: revoked"
+                        + " | Revoked: 01/01/1970 00:01:00 Z | Revoked by: Moderator",
+                AuditEntryFormatter.format(ban, ZoneOffset.UTC));
+    }
+
+    @Test
     void formatsActiveIpBanBanner() {
         IpBanRecord ban = new IpBanRecord(
-                5,
+                6,
                 "192.0.2.10",
                 TARGET,
                 "Target",
