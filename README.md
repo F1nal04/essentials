@@ -26,7 +26,7 @@ The primary command is the configured command name. Aliases are shorter alternat
 | `/inventorysee <player>` | `/isee` | Opens and edits an online or previously joined player's inventory. | Operators |
 | `/enderchestsee <player>` | `/esee` | Opens and edits an online or previously joined player's ender chest. | Operators |
 | `/ban <player> <duration> <reason>` | None | Temporarily bans an online or previously known offline player. Durations accept values such as `30m`, `2h`, `7d`, and `1d12h`. | Operators |
-| `/ban-ip <address-or-player> <duration> <reason>` | `/banip` | Temporarily bans an IPv4/IPv6 address. An online player target bans both their account and current address. | Operators |
+| `/ban-ip <address-or-player> <duration> <reason>` | `/banip` | Temporarily bans an IPv4/IPv6 address. IPv6 addresses must be quoted. An online player target bans both their account and current address. | Operators |
 | `/kick <player> <reason>` | None | Disconnects an online player and records the moderation action. | Operators |
 | `/history <player> [all\|bans\|kicks] [page]` | `/audit` | Shows paginated moderation history for online or previously known offline players, including any active ban. | Operators |
 
@@ -93,7 +93,7 @@ The TPA system includes the following configurable options:
 ### Moderation Configuration
 
 - `ban_message` controls the message shown to a banned player. It supports `{player}`, `{reason}`, `{moderator}`, `{time}`, and `{expires_at}`.
-- The same `ban_message` is used for timed IP bans. `/ban-ip` accepts a literal address or the name of an online player; a player target atomically bans both their account and current address. `/banip` is an alias.
+- The same `ban_message` is used for timed IP bans. `/ban-ip` accepts a literal address or the name of an online player; IPv6 addresses must be quoted (for example, `/ban-ip "2001:db8::10" 1h Proxy`). A player target atomically bans both their account and current address. `/banip` is an alias.
 - `kick_message` controls the message shown to a kicked player. It supports `{player}`, `{reason}`, and `{moderator}`.
 - Minecraft ampersand formatting codes such as `&c` and `&l` are supported.
 - Kick audit logging is always enabled and has no configuration switch.

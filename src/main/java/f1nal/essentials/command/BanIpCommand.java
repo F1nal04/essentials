@@ -37,12 +37,12 @@ public final class BanIpCommand {
         LiteralCommandNode<CommandSourceStack> banIp = dispatcher.register(
                 Commands.literal("ban-ip")
                         .requires(settings.getPermissionRequirement())
-                        .then(Commands.argument("address-or-player", IpBanTargetArgument.target())
+                        .then(Commands.argument("address-or-player", StringArgumentType.string())
                                 .then(Commands.argument("duration", StringArgumentType.word())
                                         .then(Commands.argument("reason", StringArgumentType.greedyString())
                                                 .executes(ctx -> banIp(
                                                         ctx.getSource(),
-                                                        IpBanTargetArgument.getTarget(
+                                                        StringArgumentType.getString(
                                                                 ctx, "address-or-player"),
                                                         StringArgumentType.getString(ctx, "duration"),
                                                         StringArgumentType.getString(ctx, "reason")))))));
