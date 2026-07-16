@@ -1,45 +1,79 @@
 # Essentials
 
-A lightweight, server-side Fabric mod that adds practical administration and quality-of-life commands for survival servers—without requiring players to install anything.
+A lightweight, server-side Fabric toolkit for survival servers and SMPs. Essentials adds the everyday player commands and moderation tools most servers need without requiring a client-side mod.
 
-Essentials focuses on the features most small SMPs need: teleport requests, persistent backpacks, inventory inspection, moderation utilities, and configurable command access.
+> **Server-side only:** players can join with an unmodified vanilla client. Fabric API is required on the server.
 
 ## Features
 
-- **Teleport requests** – `/tpa`, `/tpahere`, `/tpaccept`, `/tpdeny`, and `/tpcancel`
-- **Return teleport** – `/back` returns players to their previous position after a TPA teleport
-- **Persistent backpacks** – Per-player, serverwide, or vanilla ender-chest-backed storage
-- **Offline inventory management** – Operators can inspect and edit inventories, ender chests, and per-player backpacks even after a player logs out
-- **Live inventory views** – Changes are synchronized while the inspected player or other viewers have the same storage open
-- **Administration utilities** – Repair items, heal or feed players, and toggle survival flight
-- **Timed and permanent bans** – `/ban <player> <duration|permanent> <reason>` persists ban state in SQLite and blocks reconnects until expiry or pardon
-- **Persisted pardons** – `/pardon <player>` (alias `/unban`) revokes active account bans for online or previously known offline players and records the revocation in audit history
-- **Timed and permanent IP bans** – `/ban-ip <address-or-player> <duration|permanent> <reason>` (alias `/banip`) bans a literal address, or both the account and current address when targeting an online player; IPv6 addresses must be quoted
-- **Persisted IP pardons** – `/pardon-ip <address>` (alias `/unban-ip`) revokes an active IP ban while preserving its audit record; IPv6 addresses must be quoted
-- **Audited kicks** – `/kick <player> <reason>` uses a configurable disconnect message and always records the moderator action
-- **Moderation history** – `/history <player> [all|bans|kicks] [page]` (alias `/audit`) gives operators a paginated audit view for online or offline players, including any active ban
-- **Disposal inventory** – Safely delete unwanted items using `/disposal` or its aliases `/trash` and `/trashcan`
-- **Configurable permissions** – Enable or disable individual commands and choose whether they are available to everyone or operators only
-- **Automatic configuration migration** – New settings are merged into existing configuration files while preserving customized values
+### Player quality of life
 
-## Administrative inventory commands
+- Teleport requests with `/tpa`, `/tpahere`, accept, deny, cancel, and `/tpahere all`
+- `/back` after a completed teleport request
+- 9x3 backpacks with per-player, shared-server, or vanilla ender chest modes
+- A disposable 9x3 inventory with `/disposal`, `/trash`, or `/trashcan`
 
-- `/inventorysee <player>` — Alias: `/isee`
-- `/enderchestsee <player>` — Alias: `/esee`
-- `/backpacksee <player>` — Alias: `/bpsee`
+### Server administration
 
-Inventory views are editable and support previously joined offline players. The backpack lookup command is available when backpacks use `per_player` mode.
+- Repair held items, heal or feed players, and toggle survival flight
+- Inspect and edit inventories, ender chests, and per-player backpacks
+- Manage previously joined players even while they are offline
+- Changes stay synchronized when multiple admins inspect the same live storage
 
-## Backpack modes
+### Moderation
 
-- **Per-player** – Every player receives their own persistent backpack
-- **Serverwide** – Everyone shares one synchronized backpack
-- **Ender chest** – `/backpack` opens the player's vanilla ender chest
+- Timed or permanent player bans, including offline players
+- Timed or permanent IPv4 and IPv6 bans
+- Ban an online player's account and current IP together by using their name with `/ban-ip`
+- Kick players with a required reason
+- Pardon player accounts and IP addresses independently
+- View paginated kick and ban history with `/history` or `/audit`, including active bans
 
-Open your backpack with `/backpack` or `/bp`.
+Ban durations support values such as `30m`, `2h`, `7d`, and `1d12h`. Use `permanent` or `perm` for a permanent ban. IPv6 addresses must be quoted in commands.
 
-## Server-side only
+## Command overview
 
-Essentials runs entirely on the server. Players can connect using an unmodified vanilla client.
+| Area | Commands | Default access |
+| --- | --- | --- |
+| Teleport requests | `/tpa`, `/tpahere`, `/tpaccept`, `/tpdeny`, `/tpcancel`, `/back` | Everyone |
+| Player storage | `/backpack` (`/bp`), `/disposal` (`/trash`, `/trashcan`) | Everyone |
+| Player utilities | `/repair [target]`, `/heal [target]`, `/feed [target]`, `/flight [target]` | Operators |
+| Inventory inspection | `/inventorysee` (`/isee`), `/enderchestsee` (`/esee`), `/backpacksee` (`/bpsee`) | Operators |
+| Player moderation | `/ban`, `/pardon` (`/unban`), `/kick`, `/history` (`/audit`) | Operators |
+| IP moderation | `/ban-ip` (`/banip`), `/pardon-ip` (`/unban-ip`) | Operators |
 
-Fabric API is required on the server.
+Every command group can be disabled or made available to either operators or all players.
+
+## Configuration
+
+The configuration is generated at `config/essentials/essentials.yaml`. Changes take effect after restarting the server.
+
+| Option | Default | Purpose |
+| --- | --- | --- |
+| `tag.text` | `Essentials` | Text shown in the chat prefix |
+| `tag.color` | `DARK_PURPLE` | Prefix text color using a Minecraft formatting name |
+| `tag.bracketColor` | `DARK_GRAY` | Prefix bracket color |
+| `tag.bold` | `true` | Makes the prefix text bold |
+| `back.window_seconds` | `120` | How long `/back` remains available after a TPA teleport |
+| `backpack.mode` | `per_player` | Backpack type: `per_player`, `serverwide`, or `ender_chest` |
+| `tpa.timeout_seconds` | `60` | Time before a teleport request expires |
+| `tpa.cooldown_seconds` | `10` | Cooldown after cancelling a teleport request |
+| `moderation.ban_message` | Included in generated config | Disconnect message used for player and IP bans |
+| `moderation.kick_message` | Included in generated config | Disconnect message used for kicks |
+| `commands.<name>.enabled` | `true` | Enables or disables a command group |
+| `commands.<name>.access` | `op` or `all` | Restricts the command group to operators or allows everyone |
+
+Moderation messages support Minecraft ampersand formatting codes such as `&c` and `&l`.
+
+- `ban_message`: `{player}`, `{reason}`, `{moderator}`, `{time}`, `{expires_at}`
+- `kick_message`: `{player}`, `{reason}`, `{moderator}`
+
+Available command configuration names are `repair`, `heal`, `feed`, `flight`, `disposal`, `tpa`, `back`, `backpack`, `backpacksee`, `enderchestsee`, `inventorysee`, `ban`, `pardon`, `banip`, `pardonip`, `kick`, and `history`.
+
+## Installation
+
+1. Install Fabric Loader and Fabric API on the server.
+2. Place the Essentials JAR in the server's `mods` folder.
+3. Start the server and adjust `config/essentials/essentials.yaml` as needed.
+
+Requires Java 25 or newer. No client installation is required.
