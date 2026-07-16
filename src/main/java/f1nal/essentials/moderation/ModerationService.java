@@ -49,13 +49,17 @@ public final class ModerationService implements AutoCloseable {
             String reason,
             long durationMs,
             Moderator moderator) throws SQLException {
+        return ban(targetUuid, targetName, reason, BanDuration.timed(durationMs), moderator);
+    }
+
+    public Optional<BanRecord> ban(
+            UUID targetUuid,
+            String targetName,
+            String reason,
+            BanDuration duration,
+            Moderator moderator) throws SQLException {
         long issuedAtMs = clock.millis();
-        long expiresAtMs;
-        try {
-            expiresAtMs = Math.addExact(issuedAtMs, durationMs);
-        } catch (ArithmeticException e) {
-            throw new IllegalArgumentException("Ban expiration is too far in the future", e);
-        }
+        Long expiresAtMs = duration.expiresAt(issuedAtMs, "Ban");
         Optional<BanRecord> inserted = database.insertBan(
                 targetUuid, targetName, reason, issuedAtMs, expiresAtMs, moderator);
         inserted.ifPresent(ban -> activeBans.put(targetUuid, ban));
@@ -67,7 +71,7 @@ public final class ModerationService implements AutoCloseable {
         if (ban == null) {
             return Optional.empty();
         }
-        if (ban.expiresAtMs() <= clock.millis()) {
+        if (!ban.permanent() && ban.expiresAtMs() <= clock.millis()) {
             activeBans.remove(targetUuid, ban);
             return Optional.empty();
         }
@@ -87,9 +91,17 @@ public final class ModerationService implements AutoCloseable {
             String reason,
             long durationMs,
             Moderator moderator) throws SQLException {
+        return banIp(address, reason, BanDuration.timed(durationMs), moderator);
+    }
+
+    public Optional<IpBanRecord> banIp(
+            String address,
+            String reason,
+            BanDuration duration,
+            Moderator moderator) throws SQLException {
         String normalizedAddress = IpAddressUtil.normalizeLiteral(address);
         long issuedAtMs = clock.millis();
-        long expiresAtMs = expiration(issuedAtMs, durationMs, "IP-ban");
+        Long expiresAtMs = duration.expiresAt(issuedAtMs, "IP-ban");
         Optional<IpBanRecord> inserted = database.insertIpBan(
                 normalizedAddress, null, null, reason,
                 issuedAtMs, expiresAtMs, moderator);
@@ -104,9 +116,21 @@ public final class ModerationService implements AutoCloseable {
             String reason,
             long durationMs,
             Moderator moderator) throws SQLException {
+        return banPlayerIp(
+                address, targetUuid, targetName, reason,
+                BanDuration.timed(durationMs), moderator);
+    }
+
+    public Optional<PlayerIpBanResult> banPlayerIp(
+            String address,
+            UUID targetUuid,
+            String targetName,
+            String reason,
+            BanDuration duration,
+            Moderator moderator) throws SQLException {
         String normalizedAddress = IpAddressUtil.normalizeLiteral(address);
         long issuedAtMs = clock.millis();
-        long expiresAtMs = expiration(issuedAtMs, durationMs, "Player/IP ban");
+        Long expiresAtMs = duration.expiresAt(issuedAtMs, "Player/IP ban");
         Optional<PlayerIpBanResult> inserted = database.insertPlayerIpBan(
                 normalizedAddress, targetUuid, targetName, reason,
                 issuedAtMs, expiresAtMs, moderator);
@@ -138,7 +162,7 @@ public final class ModerationService implements AutoCloseable {
         if (ban == null) {
             return Optional.empty();
         }
-        if (ban.expiresAtMs() <= clock.millis()) {
+        if (!ban.permanent() && ban.expiresAtMs() <= clock.millis()) {
             activeIpBans.remove(normalizedAddress, ban);
             return Optional.empty();
         }
@@ -149,7 +173,9 @@ public final class ModerationService implements AutoCloseable {
         return activeIpBans.values().stream()
                 .filter(ban -> targetUuid.equals(ban.targetUuid()))
                 .filter(ban -> activeIpBan(ban.address()).isPresent())
-                .sorted(Comparator.comparingLong(IpBanRecord::expiresAtMs))
+                .sorted(Comparator.comparing(
+                        IpBanRecord::expiresAtMs,
+                        Comparator.nullsLast(Comparator.naturalOrder())))
                 .toList();
     }
 
@@ -165,14 +191,6 @@ public final class ModerationService implements AutoCloseable {
 
     public long nowMs() {
         return clock.millis();
-    }
-
-    private static long expiration(long issuedAtMs, long durationMs, String action) {
-        try {
-            return Math.addExact(issuedAtMs, durationMs);
-        } catch (ArithmeticException e) {
-            throw new IllegalArgumentException(action + " expiration is too far in the future", e);
-        }
     }
 
     @Override

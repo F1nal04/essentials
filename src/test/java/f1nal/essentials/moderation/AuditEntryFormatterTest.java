@@ -146,4 +146,34 @@ class AuditEntryFormatterTest {
                         + " | By: CONSOLE | Reason: Active proxy",
                 AuditEntryFormatter.formatActiveIpBan(ban, 0, ZoneOffset.UTC).getString());
     }
+
+    @Test
+    void formatsPermanentBanHistoryAndActiveBanner() {
+        AuditRecord history = new AuditRecord(
+                7,
+                AuditRecord.Action.BAN,
+                TARGET,
+                "Target",
+                null,
+                "Permanent reason",
+                0,
+                null,
+                null,
+                "CONSOLE",
+                "ACTIVE",
+                null,
+                null,
+                null);
+        BanRecord active = new BanRecord(
+                7, TARGET, "Target", "Permanent reason", 0, null, null, "CONSOLE");
+
+        assertEquals(
+                "[BAN] When: 01/01/1970 00:00:00 Z | Duration: Permanent"
+                        + " | By: CONSOLE | Reason: Permanent reason | Status: active",
+                AuditEntryFormatter.format(history, ZoneOffset.UTC));
+        assertEquals(
+                "ACTIVE BAN | Duration: Permanent | By: CONSOLE | Reason: Permanent reason",
+                AuditEntryFormatter.formatActiveBan(active, Long.MAX_VALUE, ZoneOffset.UTC)
+                        .getString());
+    }
 }

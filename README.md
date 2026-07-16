@@ -25,9 +25,9 @@ The primary command is the configured command name. Aliases are shorter alternat
 | `/back` | None | Returns to your previous position after a TPA teleport. | Everyone |
 | `/inventorysee <player>` | `/isee` | Opens and edits an online or previously joined player's inventory. | Operators |
 | `/enderchestsee <player>` | `/esee` | Opens and edits an online or previously joined player's ender chest. | Operators |
-| `/ban <player> <duration> <reason>` | None | Temporarily bans an online or previously known offline player. Durations accept values such as `30m`, `2h`, `7d`, and `1d12h`. | Operators |
+| `/ban <player> <duration\|permanent> <reason>` | None | Bans an online or previously known offline player. Use `permanent` or `perm` for no expiry. | Operators |
 | `/pardon <player>` | `/unban` | Revokes an active player-account ban for an online or previously known offline player. | Operators |
-| `/ban-ip <address-or-player> <duration> <reason>` | `/banip` | Temporarily bans an IPv4/IPv6 address. IPv6 addresses must be quoted. An online player target bans both their account and current address. | Operators |
+| `/ban-ip <address-or-player> <duration\|permanent> <reason>` | `/banip` | Bans an IPv4/IPv6 address temporarily or permanently. IPv6 addresses must be quoted. An online player target bans both their account and current address. | Operators |
 | `/pardon-ip <address>` | `/unban-ip` | Revokes an active IP ban. IPv6 addresses must be quoted. | Operators |
 | `/kick <player> <reason>` | None | Disconnects an online player and records the moderation action. | Operators |
 | `/history <player> [all\|bans\|kicks] [page]` | `/audit` | Shows paginated moderation history for online or previously known offline players, including any active ban. | Operators |
@@ -52,7 +52,7 @@ The backpack has three modes, set via `backpack.mode` in the config:
 - **TPA System**: Full teleport request system with configurable timeouts, cooldowns, and smart request management
 - **Back Command**: Return to your previous position after TPA teleports with a configurable time window
 - **Admin Inventory Views**: `/inventorysee` and `/enderchestsee` give operators editable views into online and offline players' inventories and ender chests
-- **Persistent Moderation**: Timed player/IP bans and the always-on kick audit log are stored in SQLite, survive restarts, and can be reviewed with `/history` or `/audit`
+- **Persistent Moderation**: Timed and permanent player/IP bans and the always-on kick audit log are stored in SQLite, survive restarts, and can be reviewed with `/history` or `/audit`
 
 ## Installation (Fabric)
 
@@ -94,8 +94,9 @@ The TPA system includes the following configurable options:
 
 ### Moderation Configuration
 
-- `ban_message` controls the message shown to a banned player. It supports `{player}`, `{reason}`, `{moderator}`, `{time}`, and `{expires_at}`.
-- The same `ban_message` is used for timed IP bans. `/ban-ip` accepts a literal address or the name of an online player; IPv6 addresses must be quoted (for example, `/ban-ip "2001:db8::10" 1h Proxy`). A player target atomically bans both their account and current address. `/banip` is an alias.
+- `ban_message` controls the message shown to a banned player. It supports `{player}`, `{reason}`, `{moderator}`, `{time}`, and `{expires_at}`. Permanent bans render these last two placeholders as `Permanent` and `Never`.
+- Ban durations accept values such as `30m`, `2h`, `7d`, and `1d12h`; use `permanent` or `perm` for a ban that never expires.
+- The same `ban_message` is used for timed and permanent IP bans. `/ban-ip` accepts a literal address or the name of an online player; IPv6 addresses must be quoted (for example, `/ban-ip "2001:db8::10" permanent Proxy`). A player target atomically bans both their account and current address. `/banip` is an alias.
 - `kick_message` controls the message shown to a kicked player. It supports `{player}`, `{reason}`, and `{moderator}`.
 - Minecraft ampersand formatting codes such as `&c` and `&l` are supported.
 - Kick audit logging is always enabled and has no configuration switch.

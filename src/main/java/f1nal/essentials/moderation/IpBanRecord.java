@@ -10,7 +10,7 @@ public record IpBanRecord(
         String targetName,
         String reason,
         long issuedAtMs,
-        long expiresAtMs,
+        Long expiresAtMs,
         UUID moderatorUuid,
         String moderatorName) {
 
@@ -21,12 +21,16 @@ public record IpBanRecord(
         if ((targetUuid == null) != (targetName == null)) {
             throw new IllegalArgumentException("IP-ban target UUID and name must both be present or absent");
         }
-        if (expiresAtMs <= issuedAtMs) {
+        if (expiresAtMs != null && expiresAtMs <= issuedAtMs) {
             throw new IllegalArgumentException("IP-ban expiration must be after its issue time");
         }
     }
 
     public String targetDisplay() {
         return targetName == null ? address : targetName;
+    }
+
+    public boolean permanent() {
+        return expiresAtMs == null;
     }
 }

@@ -13,6 +13,7 @@ import f1nal.essentials.Essentials;
 import f1nal.essentials.Messages;
 import f1nal.essentials.config.CommandConfig;
 import f1nal.essentials.moderation.DurationParser;
+import f1nal.essentials.moderation.BanDuration;
 import f1nal.essentials.moderation.IpAddressUtil;
 import f1nal.essentials.moderation.IpBanRecord;
 import f1nal.essentials.moderation.ModerationManager;
@@ -63,9 +64,9 @@ public final class BanIpCommand {
             return 0;
         }
 
-        long durationMs;
+        BanDuration duration;
         try {
-            durationMs = DurationParser.parseMillis(durationText);
+            duration = DurationParser.parseBanDuration(durationText);
         } catch (IllegalArgumentException e) {
             source.sendFailure(Messages.error(e.getMessage()));
             return 0;
@@ -81,7 +82,7 @@ public final class BanIpCommand {
         try {
             if (target.playerUuid() == null) {
                 Optional<IpBanRecord> result = ModerationManager.get().banIp(
-                        target.address(), reason, durationMs, moderator);
+                        target.address(), reason, duration, moderator);
                 if (result.isEmpty()) {
                     source.sendFailure(Messages.error(target.address() + " is already IP-banned."));
                     return 0;
@@ -90,7 +91,7 @@ public final class BanIpCommand {
             } else {
                 Optional<PlayerIpBanResult> result = ModerationManager.get().banPlayerIp(
                         target.address(), target.playerUuid(), target.playerName(),
-                        reason, durationMs, moderator);
+                        reason, duration, moderator);
                 if (result.isEmpty()) {
                     source.sendFailure(Messages.error(
                             target.playerName() + " and " + target.address()
@@ -124,8 +125,7 @@ public final class BanIpCommand {
                 ? "IP-banned " + target.address()
                 : "Banned " + target.playerName() + " and IP " + target.address();
         source.sendSuccess(() -> Messages.success(
-                subject + " for "
-                        + DurationParser.formatDuration(durationMs) + ": " + reason
+                subject + " " + duration.commandDescription() + ": " + reason
                         + " (disconnected " + disconnectedCount + " player(s))"), true);
         return 1;
     }

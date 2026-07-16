@@ -90,6 +90,24 @@ class ModerationServiceTest {
         }
     }
 
+    @Test
+    void permanentPlayerAndIpBansNeverExpireFromCache() throws Exception {
+        MutableClock clock = new MutableClock(50_000L);
+        UUID target = UUID.randomUUID();
+        Moderator moderator = new Moderator(null, "CONSOLE");
+
+        try (ModerationService service = ModerationService.open(
+                tempDir.resolve("essentials.db"), clock)) {
+            assertTrue(service.banPlayerIp(
+                    "192.0.2.50", target, "Target", "Permanent",
+                    BanDuration.permanentBan(), moderator).isPresent());
+
+            clock.setMillis(Long.MAX_VALUE);
+            assertTrue(service.activeBan(target).orElseThrow().permanent());
+            assertTrue(service.activeIpBan("192.0.2.50").orElseThrow().permanent());
+        }
+    }
+
     private static final class MutableClock extends Clock {
         private long millis;
 

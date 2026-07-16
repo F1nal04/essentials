@@ -26,7 +26,9 @@ public final class AuditEntryFormatter {
                 .withZone(zone);
         String duration = record.action() == AuditRecord.Action.KICK
                 ? KICK_DURATION
-                : DurationParser.formatDuration(record.durationMs());
+                : record.expiresAtMs() == null
+                        ? "Permanent"
+                        : DurationParser.formatDuration(record.durationMs());
         ChatFormatting actionColor = record.action() == AuditRecord.Action.KICK
                 ? ChatFormatting.GOLD
                 : ChatFormatting.DARK_RED;
@@ -65,13 +67,10 @@ public final class AuditEntryFormatter {
         DateTimeFormatter timestamp = DateTimeFormatter
                 .ofPattern("dd/MM/uuuu HH:mm:ss z", Locale.ROOT)
                 .withZone(zone);
-        return Component.literal("ACTIVE BAN")
-                .withStyle(ChatFormatting.DARK_GREEN)
-                .append(label(" | Remaining: "))
-                .append(value(DurationParser.formatRemaining(ban.expiresAtMs() - nowMs)))
-                .append(label(" | Expires: "))
-                .append(value(timestamp.format(Instant.ofEpochMilli(ban.expiresAtMs()))))
-                .append(label(" | By: "))
+        MutableComponent line = Component.literal("ACTIVE BAN")
+                .withStyle(ChatFormatting.DARK_GREEN);
+        appendExpiration(line, ban.expiresAtMs(), nowMs, timestamp);
+        return line.append(label(" | By: "))
                 .append(value(ban.moderatorName()))
                 .append(label(" | Reason: "))
                 .append(value(ban.reason()));
@@ -81,18 +80,31 @@ public final class AuditEntryFormatter {
         DateTimeFormatter timestamp = DateTimeFormatter
                 .ofPattern("dd/MM/uuuu HH:mm:ss z", Locale.ROOT)
                 .withZone(zone);
-        return Component.literal("ACTIVE IP BAN")
+        MutableComponent line = Component.literal("ACTIVE IP BAN")
                 .withStyle(ChatFormatting.DARK_GREEN)
                 .append(label(" | Address: "))
-                .append(value(ban.address()))
-                .append(label(" | Remaining: "))
-                .append(value(DurationParser.formatRemaining(ban.expiresAtMs() - nowMs)))
-                .append(label(" | Expires: "))
-                .append(value(timestamp.format(Instant.ofEpochMilli(ban.expiresAtMs()))))
-                .append(label(" | By: "))
+                .append(value(ban.address()));
+        appendExpiration(line, ban.expiresAtMs(), nowMs, timestamp);
+        return line.append(label(" | By: "))
                 .append(value(ban.moderatorName()))
                 .append(label(" | Reason: "))
                 .append(value(ban.reason()));
+    }
+
+    private static void appendExpiration(
+            MutableComponent line,
+            Long expiresAtMs,
+            long nowMs,
+            DateTimeFormatter timestamp) {
+        if (expiresAtMs == null) {
+            line.append(label(" | Duration: "))
+                    .append(value("Permanent"));
+            return;
+        }
+        line.append(label(" | Remaining: "))
+                .append(value(DurationParser.formatRemaining(expiresAtMs - nowMs)))
+                .append(label(" | Expires: "))
+                .append(value(timestamp.format(Instant.ofEpochMilli(expiresAtMs))));
     }
 
     private static MutableComponent label(String text) {

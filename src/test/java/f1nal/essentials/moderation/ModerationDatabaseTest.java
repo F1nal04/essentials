@@ -217,6 +217,57 @@ class ModerationDatabaseTest {
     }
 
     @Test
+    void persistsPermanentPlayerAndIpBansUntilRevoked() throws Exception {
+        Path path = tempDir.resolve("essentials.db");
+        UUID target = UUID.randomUUID();
+        Moderator moderator = new Moderator(null, "CONSOLE");
+
+        try (ModerationDatabase database = ModerationDatabase.open(path, CLOCK)) {
+            PlayerIpBanResult result = database.insertPlayerIpBan(
+                    "192.0.2.60", target, "Target", "Permanent",
+                    1_000_000L, null, moderator).orElseThrow();
+            assertTrue(result.playerBan().permanent());
+            assertTrue(result.ipBan().permanent());
+        }
+
+        try (ModerationDatabase reopened = ModerationDatabase.open(path, CLOCK)) {
+            assertTrue(reopened.loadActiveBans(Long.MAX_VALUE).getFirst().permanent());
+            assertTrue(reopened.loadActiveIpBans(Long.MAX_VALUE).getFirst().permanent());
+            assertTrue(reopened.revokeBan(target, 2_000_000L, moderator));
+            assertTrue(reopened.revokeIpBan("192.0.2.60", 2_000_000L, moderator));
+        }
+    }
+
+    @Test
+    void upgradesReleasedSchemaWithoutLosingFiniteBans() throws Exception {
+        Path path = tempDir.resolve("essentials.db");
+        UUID target = UUID.randomUUID();
+        UUID moderator = UUID.randomUUID();
+        createReleasedSchema(path, target, moderator);
+
+        try (ModerationDatabase database = ModerationDatabase.open(path, CLOCK)) {
+            BanRecord playerBan = database.loadActiveBans(1_500_000L).getFirst();
+            IpBanRecord ipBan = database.loadActiveIpBans(1_500_000L).getFirst();
+            assertEquals(target, playerBan.targetUuid());
+            assertEquals(2_000_000L, playerBan.expiresAtMs());
+            assertEquals("192.0.2.70", ipBan.address());
+            assertEquals(2_000_000L, ipBan.expiresAtMs());
+
+            assertTrue(database.insertBan(
+                    UUID.randomUUID(), "Permanent", "No expiry",
+                    1_500_000L, null, new Moderator(null, "CONSOLE")).isPresent());
+            assertTrue(database.insertIpBan(
+                    "192.0.2.71", null, null, "No expiry",
+                    1_500_000L, null, new Moderator(null, "CONSOLE")).isPresent());
+        }
+
+        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + path.toAbsolutePath())) {
+            assertEquals(0, expirationNotNull(connection, "bans"));
+            assertEquals(0, expirationNotNull(connection, "ip_bans"));
+        }
+    }
+
+    @Test
     void initializesCurrentSchemaWithoutMigrationTable() throws Exception {
         Path path = tempDir.resolve("essentials.db");
         try (ModerationDatabase ignored = ModerationDatabase.open(path, CLOCK)) {
@@ -229,6 +280,82 @@ class ModerationDatabaseTest {
                 var result = statement.executeQuery()) {
             assertTrue(result.next());
             assertEquals(0, result.getInt(1));
+        }
+    }
+
+    private static void createReleasedSchema(Path path, UUID target, UUID moderator)
+            throws Exception {
+        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + path.toAbsolutePath());
+                var statement = connection.createStatement()) {
+            statement.execute("""
+                    CREATE TABLE bans (
+                        id INTEGER PRIMARY KEY,
+                        target_uuid TEXT NOT NULL,
+                        target_name TEXT NOT NULL,
+                        reason TEXT NOT NULL,
+                        issued_at_ms INTEGER NOT NULL,
+                        expires_at_ms INTEGER NOT NULL,
+                        moderator_uuid TEXT,
+                        moderator_name TEXT NOT NULL,
+                        state TEXT NOT NULL DEFAULT 'ACTIVE',
+                        revoked_at_ms INTEGER,
+                        revoked_by_uuid TEXT,
+                        revoked_by_name TEXT,
+                        CHECK (expires_at_ms > issued_at_ms)
+                    )
+                    """);
+            statement.execute("""
+                    CREATE TABLE ip_bans (
+                        id INTEGER PRIMARY KEY,
+                        address TEXT NOT NULL,
+                        target_uuid TEXT,
+                        target_name TEXT,
+                        reason TEXT NOT NULL,
+                        issued_at_ms INTEGER NOT NULL,
+                        expires_at_ms INTEGER NOT NULL,
+                        moderator_uuid TEXT,
+                        moderator_name TEXT NOT NULL,
+                        state TEXT NOT NULL DEFAULT 'ACTIVE',
+                        revoked_at_ms INTEGER,
+                        revoked_by_uuid TEXT,
+                        revoked_by_name TEXT,
+                        CHECK (expires_at_ms > issued_at_ms)
+                    )
+                    """);
+            try (var insert = connection.prepareStatement("""
+                    INSERT INTO bans(
+                        target_uuid, target_name, reason, issued_at_ms, expires_at_ms,
+                        moderator_uuid, moderator_name, state
+                    ) VALUES (?, 'Target', 'Finite', 1000000, 2000000, ?, 'Moderator', 'ACTIVE')
+                    """)) {
+                insert.setString(1, target.toString());
+                insert.setString(2, moderator.toString());
+                insert.executeUpdate();
+            }
+            try (var insert = connection.prepareStatement("""
+                    INSERT INTO ip_bans(
+                        address, target_uuid, target_name, reason, issued_at_ms, expires_at_ms,
+                        moderator_uuid, moderator_name, state
+                    ) VALUES ('192.0.2.70', ?, 'Target', 'Finite', 1000000, 2000000,
+                              ?, 'Moderator', 'ACTIVE')
+                    """)) {
+                insert.setString(1, target.toString());
+                insert.setString(2, moderator.toString());
+                insert.executeUpdate();
+            }
+        }
+    }
+
+    private static int expirationNotNull(java.sql.Connection connection, String table)
+            throws Exception {
+        try (var statement = connection.createStatement();
+                var result = statement.executeQuery("PRAGMA table_info(" + table + ")")) {
+            while (result.next()) {
+                if ("expires_at_ms".equals(result.getString("name"))) {
+                    return result.getInt("notnull");
+                }
+            }
+            throw new AssertionError("Missing expires_at_ms in " + table);
         }
     }
 }

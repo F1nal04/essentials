@@ -18,8 +18,8 @@ public final class ModerationMessageFormatter {
                 "player", ban.targetName(),
                 "reason", ban.reason(),
                 "moderator", ban.moderatorName(),
-                "time", DurationParser.formatRemaining(ban.expiresAtMs() - nowMs),
-                "expires_at", Instant.ofEpochMilli(ban.expiresAtMs()).toString()));
+                "time", remaining(ban.expiresAtMs(), nowMs),
+                "expires_at", expiration(ban.expiresAtMs())));
     }
 
     public static String ipBanMessage(String template, IpBanRecord ban, long nowMs) {
@@ -27,8 +27,8 @@ public final class ModerationMessageFormatter {
                 "player", ban.targetDisplay(),
                 "reason", ban.reason(),
                 "moderator", ban.moderatorName(),
-                "time", DurationParser.formatRemaining(ban.expiresAtMs() - nowMs),
-                "expires_at", Instant.ofEpochMilli(ban.expiresAtMs()).toString()));
+                "time", remaining(ban.expiresAtMs(), nowMs),
+                "expires_at", expiration(ban.expiresAtMs())));
     }
 
     public static String kickMessage(String template, String targetName, String reason, String moderatorName) {
@@ -50,5 +50,15 @@ public final class ModerationMessageFormatter {
         }
         matcher.appendTail(output);
         return output.toString();
+    }
+
+    private static String remaining(Long expiresAtMs, long nowMs) {
+        return expiresAtMs == null
+                ? "Permanent"
+                : DurationParser.formatRemaining(expiresAtMs - nowMs);
+    }
+
+    private static String expiration(Long expiresAtMs) {
+        return expiresAtMs == null ? "Never" : Instant.ofEpochMilli(expiresAtMs).toString();
     }
 }

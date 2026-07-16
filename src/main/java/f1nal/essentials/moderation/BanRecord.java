@@ -9,7 +9,7 @@ public record BanRecord(
         String targetName,
         String reason,
         long issuedAtMs,
-        long expiresAtMs,
+        Long expiresAtMs,
         UUID moderatorUuid,
         String moderatorName) {
 
@@ -18,8 +18,12 @@ public record BanRecord(
         Objects.requireNonNull(targetName, "targetName");
         Objects.requireNonNull(reason, "reason");
         Objects.requireNonNull(moderatorName, "moderatorName");
-        if (expiresAtMs <= issuedAtMs) {
+        if (expiresAtMs != null && expiresAtMs <= issuedAtMs) {
             throw new IllegalArgumentException("Ban expiration must be after its issue time");
         }
+    }
+
+    public boolean permanent() {
+        return expiresAtMs == null;
     }
 }

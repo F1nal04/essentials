@@ -2,6 +2,7 @@ package f1nal.essentials.moderation;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
@@ -12,6 +13,13 @@ class DurationParserTest {
         assertEquals(30L * 60_000L, DurationParser.parseMillis("30m"));
         assertEquals(2L * 3_600_000L, DurationParser.parseMillis("2H"));
         assertEquals(129_600_000L, DurationParser.parseMillis("1d12h"));
+    }
+
+    @Test
+    void parsesPermanentBanKeywords() {
+        assertTrue(DurationParser.parseBanDuration("permanent").permanent());
+        assertTrue(DurationParser.parseBanDuration("PERM").permanent());
+        assertEquals(3_600_000L, DurationParser.parseBanDuration("1h").durationMs());
     }
 
     @Test

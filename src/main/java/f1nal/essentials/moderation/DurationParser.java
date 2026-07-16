@@ -13,6 +13,16 @@ public final class DurationParser {
     private DurationParser() {
     }
 
+    public static BanDuration parseBanDuration(String input) {
+        if (input != null) {
+            String normalized = input.trim().toLowerCase(Locale.ROOT);
+            if (normalized.equals("permanent") || normalized.equals("perm")) {
+                return BanDuration.permanentBan();
+            }
+        }
+        return BanDuration.timed(parseMillis(input));
+    }
+
     /** Parses values such as {@code 30m}, {@code 2h}, or {@code 1d12h}. */
     public static long parseMillis(String input) {
         if (input == null || input.isBlank()) {
@@ -82,6 +92,7 @@ public final class DurationParser {
 
     private static IllegalArgumentException invalid(String input) {
         return new IllegalArgumentException(
-                "Invalid duration '" + input + "'. Use values such as 30m, 2h, 7d, or 1d12h.");
+                "Invalid duration '" + input
+                        + "'. Use permanent, perm, or values such as 30m, 2h, 7d, or 1d12h.");
     }
 }

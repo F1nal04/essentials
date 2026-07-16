@@ -61,89 +61,173 @@ public final class ModerationDatabase implements AutoCloseable {
 
     private void initializeSchema() throws SQLException {
         inTransaction(() -> {
-            try (Statement statement = connection.createStatement()) {
-                statement.execute("""
-                        CREATE TABLE IF NOT EXISTS bans (
-                            id INTEGER PRIMARY KEY,
-                            target_uuid TEXT NOT NULL,
-                            target_name TEXT NOT NULL,
-                            reason TEXT NOT NULL,
-                            issued_at_ms INTEGER NOT NULL,
-                            expires_at_ms INTEGER NOT NULL,
-                            moderator_uuid TEXT,
-                            moderator_name TEXT NOT NULL,
-                            state TEXT NOT NULL DEFAULT 'ACTIVE'
-                                CHECK (state IN ('ACTIVE', 'EXPIRED', 'REVOKED')),
-                            revoked_at_ms INTEGER,
-                            revoked_by_uuid TEXT,
-                            revoked_by_name TEXT,
-                            CHECK (expires_at_ms > issued_at_ms)
-                        )
-                        """);
-                statement.execute("""
-                        CREATE UNIQUE INDEX IF NOT EXISTS bans_one_active_per_player
-                        ON bans(target_uuid) WHERE state = 'ACTIVE'
-                        """);
-                statement.execute("""
-                        CREATE INDEX IF NOT EXISTS bans_active_expiration
-                        ON bans(state, expires_at_ms)
-                        """);
-                statement.execute("""
-                        CREATE INDEX IF NOT EXISTS bans_target_time
-                        ON bans(target_uuid, issued_at_ms DESC)
-                        """);
-                statement.execute("""
-                        CREATE TABLE IF NOT EXISTS kicks (
-                            id INTEGER PRIMARY KEY,
-                            target_uuid TEXT NOT NULL,
-                            target_name TEXT NOT NULL,
-                            reason TEXT NOT NULL,
-                            kicked_at_ms INTEGER NOT NULL,
-                            moderator_uuid TEXT,
-                            moderator_name TEXT NOT NULL
-                        )
-                        """);
-                statement.execute("""
-                        CREATE INDEX IF NOT EXISTS kicks_target_time
-                        ON kicks(target_uuid, kicked_at_ms DESC)
-                        """);
-                statement.execute("""
-                        CREATE TABLE IF NOT EXISTS ip_bans (
-                            id INTEGER PRIMARY KEY,
-                            address TEXT NOT NULL,
-                            target_uuid TEXT,
-                            target_name TEXT,
-                            reason TEXT NOT NULL,
-                            issued_at_ms INTEGER NOT NULL,
-                            expires_at_ms INTEGER NOT NULL,
-                            moderator_uuid TEXT,
-                            moderator_name TEXT NOT NULL,
-                            state TEXT NOT NULL DEFAULT 'ACTIVE'
-                                CHECK (state IN ('ACTIVE', 'EXPIRED', 'REVOKED')),
-                            revoked_at_ms INTEGER,
-                            revoked_by_uuid TEXT,
-                            revoked_by_name TEXT,
-                            CHECK (expires_at_ms > issued_at_ms),
-                            CHECK ((target_uuid IS NULL AND target_name IS NULL)
-                                OR (target_uuid IS NOT NULL AND target_name IS NOT NULL))
-                        )
-                        """);
-                statement.execute("""
-                        CREATE UNIQUE INDEX IF NOT EXISTS ip_bans_one_active_per_address
-                        ON ip_bans(address) WHERE state = 'ACTIVE'
-                        """);
-                statement.execute("""
-                        CREATE INDEX IF NOT EXISTS ip_bans_active_expiration
-                        ON ip_bans(state, expires_at_ms)
-                        """);
-                statement.execute("""
-                        CREATE INDEX IF NOT EXISTS ip_bans_target_time
-                        ON ip_bans(target_uuid, issued_at_ms DESC)
-                        """);
+            if (expirationIsRequired("bans")) {
+                migrateBansForPermanentExpirations();
             }
+            if (expirationIsRequired("ip_bans")) {
+                migrateIpBansForPermanentExpirations();
+            }
+            createCurrentSchema();
             return null;
         });
     }
+
+    private boolean expirationIsRequired(String table) throws SQLException {
+        String safeTable = switch (table) {
+            case "bans" -> "bans";
+            case "ip_bans" -> "ip_bans";
+            default -> throw new IllegalArgumentException("Unexpected moderation table: " + table);
+        };
+        try (Statement statement = connection.createStatement();
+                ResultSet result = statement.executeQuery("PRAGMA table_info(" + safeTable + ")")) {
+            while (result.next()) {
+                if ("expires_at_ms".equals(result.getString("name"))) {
+                    return result.getInt("notnull") == 1;
+                }
+            }
+            return false;
+        }
+    }
+
+    private void migrateBansForPermanentExpirations() throws SQLException {
+        try (Statement statement = connection.createStatement()) {
+            statement.execute("DROP INDEX IF EXISTS bans_one_active_per_player");
+            statement.execute("DROP INDEX IF EXISTS bans_active_expiration");
+            statement.execute("DROP INDEX IF EXISTS bans_target_time");
+            statement.execute("ALTER TABLE bans RENAME TO bans_before_permanent");
+            createBansTable(statement);
+            statement.execute("""
+                    INSERT INTO bans(
+                        id, target_uuid, target_name, reason, issued_at_ms, expires_at_ms,
+                        moderator_uuid, moderator_name, state, revoked_at_ms,
+                        revoked_by_uuid, revoked_by_name
+                    )
+                    SELECT id, target_uuid, target_name, reason, issued_at_ms, expires_at_ms,
+                           moderator_uuid, moderator_name, state, revoked_at_ms,
+                           revoked_by_uuid, revoked_by_name
+                    FROM bans_before_permanent
+                    """);
+            statement.execute("DROP TABLE bans_before_permanent");
+        }
+    }
+
+    private void migrateIpBansForPermanentExpirations() throws SQLException {
+        try (Statement statement = connection.createStatement()) {
+            statement.execute("DROP INDEX IF EXISTS ip_bans_one_active_per_address");
+            statement.execute("DROP INDEX IF EXISTS ip_bans_active_expiration");
+            statement.execute("DROP INDEX IF EXISTS ip_bans_target_time");
+            statement.execute("ALTER TABLE ip_bans RENAME TO ip_bans_before_permanent");
+            createIpBansTable(statement);
+            statement.execute("""
+                    INSERT INTO ip_bans(
+                        id, address, target_uuid, target_name, reason, issued_at_ms,
+                        expires_at_ms, moderator_uuid, moderator_name, state,
+                        revoked_at_ms, revoked_by_uuid, revoked_by_name
+                    )
+                    SELECT id, address, target_uuid, target_name, reason, issued_at_ms,
+                           expires_at_ms, moderator_uuid, moderator_name, state,
+                           revoked_at_ms, revoked_by_uuid, revoked_by_name
+                    FROM ip_bans_before_permanent
+                    """);
+            statement.execute("DROP TABLE ip_bans_before_permanent");
+        }
+    }
+
+    private void createCurrentSchema() throws SQLException {
+        try (Statement statement = connection.createStatement()) {
+            createBansTable(statement);
+            statement.execute("""
+                    CREATE UNIQUE INDEX IF NOT EXISTS bans_one_active_per_player
+                    ON bans(target_uuid) WHERE state = 'ACTIVE'
+                    """);
+            statement.execute("""
+                    CREATE INDEX IF NOT EXISTS bans_active_expiration
+                    ON bans(state, expires_at_ms)
+                    """);
+            statement.execute("""
+                    CREATE INDEX IF NOT EXISTS bans_target_time
+                    ON bans(target_uuid, issued_at_ms DESC)
+                    """);
+            statement.execute("""
+                    CREATE TABLE IF NOT EXISTS kicks (
+                        id INTEGER PRIMARY KEY,
+                        target_uuid TEXT NOT NULL,
+                        target_name TEXT NOT NULL,
+                        reason TEXT NOT NULL,
+                        kicked_at_ms INTEGER NOT NULL,
+                        moderator_uuid TEXT,
+                        moderator_name TEXT NOT NULL
+                    )
+                    """);
+            statement.execute("""
+                    CREATE INDEX IF NOT EXISTS kicks_target_time
+                    ON kicks(target_uuid, kicked_at_ms DESC)
+                    """);
+            createIpBansTable(statement);
+            statement.execute("""
+                    CREATE UNIQUE INDEX IF NOT EXISTS ip_bans_one_active_per_address
+                    ON ip_bans(address) WHERE state = 'ACTIVE'
+                    """);
+            statement.execute("""
+                    CREATE INDEX IF NOT EXISTS ip_bans_active_expiration
+                    ON ip_bans(state, expires_at_ms)
+                    """);
+            statement.execute("""
+                    CREATE INDEX IF NOT EXISTS ip_bans_target_time
+                    ON ip_bans(target_uuid, issued_at_ms DESC)
+                    """);
+        }
+    }
+
+    private static void createBansTable(Statement statement) throws SQLException {
+        statement.execute("""
+                CREATE TABLE IF NOT EXISTS bans (
+                    id INTEGER PRIMARY KEY,
+                    target_uuid TEXT NOT NULL,
+                    target_name TEXT NOT NULL,
+                    reason TEXT NOT NULL,
+                    issued_at_ms INTEGER NOT NULL,
+                    expires_at_ms INTEGER,
+                    moderator_uuid TEXT,
+                    moderator_name TEXT NOT NULL,
+                    state TEXT NOT NULL DEFAULT 'ACTIVE'
+                        CHECK (state IN ('ACTIVE', 'EXPIRED', 'REVOKED')),
+                    revoked_at_ms INTEGER,
+                    revoked_by_uuid TEXT,
+                    revoked_by_name TEXT,
+                    CHECK (expires_at_ms IS NULL OR expires_at_ms > issued_at_ms)
+                )
+                """);
+    }
+
+    private static void createIpBansTable(Statement statement) throws SQLException {
+        statement.execute("""
+                CREATE TABLE IF NOT EXISTS ip_bans (
+                    id INTEGER PRIMARY KEY,
+                    address TEXT NOT NULL,
+                    target_uuid TEXT,
+                    target_name TEXT,
+                    reason TEXT NOT NULL,
+                    issued_at_ms INTEGER NOT NULL,
+                    expires_at_ms INTEGER,
+                    moderator_uuid TEXT,
+                    moderator_name TEXT NOT NULL,
+                    state TEXT NOT NULL DEFAULT 'ACTIVE'
+                        CHECK (state IN ('ACTIVE', 'EXPIRED', 'REVOKED')),
+                    revoked_at_ms INTEGER,
+                    revoked_by_uuid TEXT,
+                    revoked_by_name TEXT,
+                    CHECK (expires_at_ms IS NULL OR expires_at_ms > issued_at_ms),
+                    CHECK ((target_uuid IS NULL AND target_name IS NULL)
+                        OR (target_uuid IS NOT NULL AND target_name IS NOT NULL))
+                )
+                """);
+    }
+
+    /*
+     * Schema creation and the v3.2.1 nullable-expiration upgrade intentionally
+     * share the definitions above so fresh and upgraded databases are identical.
+     */
 
     public synchronized List<BanRecord> loadActiveBans(long nowMs) throws SQLException {
         return inTransaction(() -> {
@@ -153,7 +237,8 @@ public final class ModerationDatabase implements AutoCloseable {
                     SELECT id, target_uuid, target_name, reason, issued_at_ms, expires_at_ms,
                            moderator_uuid, moderator_name
                     FROM bans
-                    WHERE state = 'ACTIVE' AND expires_at_ms > ?
+                    WHERE state = 'ACTIVE'
+                      AND (expires_at_ms IS NULL OR expires_at_ms > ?)
                     """)) {
                 statement.setLong(1, nowMs);
                 try (ResultSet result = statement.executeQuery()) {
@@ -171,7 +256,7 @@ public final class ModerationDatabase implements AutoCloseable {
             String targetName,
             String reason,
             long issuedAtMs,
-            long expiresAtMs,
+            Long expiresAtMs,
             Moderator moderator) throws SQLException {
         return inTransaction(() -> {
             expireBans(issuedAtMs);
@@ -216,7 +301,8 @@ public final class ModerationDatabase implements AutoCloseable {
                     SELECT id, address, target_uuid, target_name, reason, issued_at_ms,
                            expires_at_ms, moderator_uuid, moderator_name
                     FROM ip_bans
-                    WHERE state = 'ACTIVE' AND expires_at_ms > ?
+                    WHERE state = 'ACTIVE'
+                      AND (expires_at_ms IS NULL OR expires_at_ms > ?)
                     """)) {
                 statement.setLong(1, nowMs);
                 try (ResultSet result = statement.executeQuery()) {
@@ -235,7 +321,7 @@ public final class ModerationDatabase implements AutoCloseable {
             String targetName,
             String reason,
             long issuedAtMs,
-            long expiresAtMs,
+            Long expiresAtMs,
             Moderator moderator) throws SQLException {
         return inTransaction(() -> {
             expireIpBans(issuedAtMs);
@@ -279,7 +365,7 @@ public final class ModerationDatabase implements AutoCloseable {
             String targetName,
             String reason,
             long issuedAtMs,
-            long expiresAtMs,
+            Long expiresAtMs,
             Moderator moderator) throws SQLException {
         return inTransaction(() -> {
             expireBans(issuedAtMs);
@@ -333,7 +419,7 @@ public final class ModerationDatabase implements AutoCloseable {
             String targetName,
             String reason,
             long issuedAtMs,
-            long expiresAtMs,
+            Long expiresAtMs,
             Moderator moderator) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement("""
                 INSERT INTO bans(
@@ -345,7 +431,7 @@ public final class ModerationDatabase implements AutoCloseable {
             statement.setString(2, targetName);
             statement.setString(3, reason);
             statement.setLong(4, issuedAtMs);
-            statement.setLong(5, expiresAtMs);
+            setNullableLong(statement, 5, expiresAtMs);
             setNullableUuid(statement, 6, moderator.uuid());
             statement.setString(7, moderator.name());
             statement.executeUpdate();
@@ -366,7 +452,7 @@ public final class ModerationDatabase implements AutoCloseable {
             String targetName,
             String reason,
             long issuedAtMs,
-            long expiresAtMs,
+            Long expiresAtMs,
             Moderator moderator) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement("""
                 INSERT INTO ip_bans(
@@ -383,7 +469,7 @@ public final class ModerationDatabase implements AutoCloseable {
             }
             statement.setString(4, reason);
             statement.setLong(5, issuedAtMs);
-            statement.setLong(6, expiresAtMs);
+            setNullableLong(statement, 6, expiresAtMs);
             setNullableUuid(statement, 7, moderator.uuid());
             statement.setString(8, moderator.name());
             statement.executeUpdate();
@@ -572,7 +658,8 @@ public final class ModerationDatabase implements AutoCloseable {
     private void expireBans(long nowMs) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement("""
                 UPDATE bans SET state = 'EXPIRED'
-                WHERE state = 'ACTIVE' AND expires_at_ms <= ?
+                WHERE state = 'ACTIVE' AND expires_at_ms IS NOT NULL
+                  AND expires_at_ms <= ?
                 """)) {
             statement.setLong(1, nowMs);
             statement.executeUpdate();
@@ -582,7 +669,8 @@ public final class ModerationDatabase implements AutoCloseable {
     private void expireIpBans(long nowMs) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement("""
                 UPDATE ip_bans SET state = 'EXPIRED'
-                WHERE state = 'ACTIVE' AND expires_at_ms <= ?
+                WHERE state = 'ACTIVE' AND expires_at_ms IS NOT NULL
+                  AND expires_at_ms <= ?
                 """)) {
             statement.setLong(1, nowMs);
             statement.executeUpdate();
@@ -598,7 +686,7 @@ public final class ModerationDatabase implements AutoCloseable {
                     result.getString("target_name"),
                     result.getString("reason"),
                     result.getLong("issued_at_ms"),
-                    result.getLong("expires_at_ms"),
+                    nullableLong(result, "expires_at_ms"),
                     moderator == null ? null : UUID.fromString(moderator),
                     result.getString("moderator_name"));
         } catch (IllegalArgumentException e) {
@@ -617,7 +705,7 @@ public final class ModerationDatabase implements AutoCloseable {
                     result.getString("target_name"),
                     result.getString("reason"),
                     result.getLong("issued_at_ms"),
-                    result.getLong("expires_at_ms"),
+                    nullableLong(result, "expires_at_ms"),
                     moderator == null ? null : UUID.fromString(moderator),
                     result.getString("moderator_name"));
         } catch (IllegalArgumentException e) {
@@ -659,6 +747,20 @@ public final class ModerationDatabase implements AutoCloseable {
         } else {
             statement.setString(index, uuid.toString());
         }
+    }
+
+    private static void setNullableLong(PreparedStatement statement, int index, Long value)
+            throws SQLException {
+        if (value == null) {
+            statement.setNull(index, java.sql.Types.BIGINT);
+        } else {
+            statement.setLong(index, value);
+        }
+    }
+
+    private static Long nullableLong(ResultSet result, String column) throws SQLException {
+        long value = result.getLong(column);
+        return result.wasNull() ? null : value;
     }
 
     private <T> T inTransaction(SqlOperation<T> operation) throws SQLException {

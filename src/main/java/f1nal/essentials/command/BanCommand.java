@@ -11,6 +11,7 @@ import f1nal.essentials.Essentials;
 import f1nal.essentials.Messages;
 import f1nal.essentials.config.CommandConfig;
 import f1nal.essentials.moderation.BanRecord;
+import f1nal.essentials.moderation.BanDuration;
 import f1nal.essentials.moderation.DurationParser;
 import f1nal.essentials.moderation.ModerationManager;
 import f1nal.essentials.moderation.ModerationMessages;
@@ -60,9 +61,9 @@ public final class BanCommand {
             return 0;
         }
 
-        long durationMs;
+        BanDuration duration;
         try {
-            durationMs = DurationParser.parseMillis(durationText);
+            duration = DurationParser.parseBanDuration(durationText);
         } catch (IllegalArgumentException e) {
             source.sendFailure(Messages.error(e.getMessage()));
             return 0;
@@ -73,7 +74,7 @@ public final class BanCommand {
         Optional<BanRecord> result;
         try {
             result = ModerationManager.get().ban(
-                    target.id(), target.name(), reason, durationMs, moderator);
+                    target.id(), target.name(), reason, duration, moderator);
         } catch (SQLException | IllegalStateException e) {
             Essentials.LOGGER.error("Failed to persist ban for {}", target.id(), e);
             source.sendFailure(Messages.error("The ban could not be saved; no ban was applied."));
@@ -95,8 +96,8 @@ public final class BanCommand {
                     ban, ModerationManager.get().nowMs()));
         }
         source.sendSuccess(() -> Messages.success(
-                "Banned " + target.name() + " for "
-                        + DurationParser.formatRemaining(durationMs) + ": " + reason), true);
+                "Banned " + target.name() + " "
+                        + duration.commandDescription() + ": " + reason), true);
         return 1;
     }
 
