@@ -19,6 +19,7 @@ import net.minecraft.resources.RegistryOps;
 import com.mojang.serialization.DataResult;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.FilterOutputStream;
 
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
@@ -227,7 +228,14 @@ public final class BackpackManager {
         Path temporary = Files.createTempFile(file.getParent(), file.getFileName().toString(), ".tmp");
         try {
             try (FileOutputStream fos = new FileOutputStream(temporary.toFile())) {
-                NbtIo.writeCompressed(nbt, fos);
+                // NbtIo closes the stream it receives. Keep the file stream
+                // open until after sync so its descriptor is still valid.
+                NbtIo.writeCompressed(nbt, new FilterOutputStream(fos) {
+                    @Override
+                    public void close() throws IOException {
+                        flush();
+                    }
+                });
                 fos.getFD().sync();
             }
             try {
