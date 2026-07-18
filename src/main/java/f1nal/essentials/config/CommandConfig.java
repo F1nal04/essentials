@@ -10,6 +10,7 @@ import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.Yaml;
 
 import f1nal.essentials.Essentials;
+import f1nal.essentials.permission.EssentialsPermissions;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 
@@ -95,8 +96,9 @@ public final class CommandConfig {
 
     public record CommandSettings(boolean enabled, String access) {
 
-        public java.util.function.Predicate<CommandSourceStack> getPermissionRequirement() {
-            return switch (access.toLowerCase()) {
+        public java.util.function.Predicate<CommandSourceStack> getPermissionRequirement(
+                String permissionPath) {
+            java.util.function.Predicate<CommandSourceStack> legacyRequirement = switch (access.toLowerCase()) {
                 case "op" ->
                     Commands.hasPermission(Commands.LEVEL_GAMEMASTERS);
                 case "all" ->
@@ -104,6 +106,7 @@ public final class CommandConfig {
                 default ->
                     Commands.hasPermission(Commands.LEVEL_GAMEMASTERS); // Default to op
             };
+            return EssentialsPermissions.require(permissionPath, legacyRequirement);
         }
     }
 }

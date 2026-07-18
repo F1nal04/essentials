@@ -34,7 +34,7 @@ public final class BanCommand {
             Commands.CommandSelection environment,
             CommandConfig.CommandSettings settings) {
         dispatcher.register(Commands.literal("ban")
-                .requires(settings.getPermissionRequirement())
+                .requires(settings.getPermissionRequirement("ban"))
                 .then(Commands.argument("player", GameProfileArgument.gameProfile())
                         .then(Commands.argument("duration", StringArgumentType.word())
                                 .then(Commands.argument("reason", StringArgumentType.greedyString())

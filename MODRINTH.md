@@ -42,7 +42,10 @@ Ban durations support values such as `30m`, `2h`, `7d`, and `1d12h`. Use `perman
 | Player moderation | `/ban`, `/pardon` (`/unban`), `/kick`, `/history` (`/audit`) | Operators |
 | IP moderation | `/ban-ip` (`/banip`), `/pardon-ip` (`/unban-ip`) | Operators |
 
-Every command group can be disabled or made available to either operators or all players.
+Every command group can be disabled or made available to either operators or all players. With a compatible
+Fabric permission provider such as LuckPerms, stable `essentials.<command>` nodes provide granular access;
+aliases share the primary command node. See the README for the complete permission-node table. Without a
+provider, `commands.<name>.access` remains the only access check and behavior is unchanged.
 
 ## Configuration
 

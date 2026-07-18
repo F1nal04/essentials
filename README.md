@@ -108,6 +108,48 @@ The TPA system includes the following configurable options:
 
 Every command can be enabled/disabled and have its access level configured (`op`/`all`) in the `commands` section.
 
+When a supported Fabric permission provider such as LuckPerms is installed, Essentials automatically uses the
+nodes below. A provider grant or denial takes precedence over `access`. If no provider supplies a result, the
+existing `access: op|all` check remains the fallback, so current servers keep the same behavior and configuration.
+Aliases always use their primary command's node. Console execution is unchanged.
+
+| Command | Permission node |
+| --- | --- |
+| `/repair` | `essentials.repair` |
+| `/heal` | `essentials.heal` |
+| `/feed` | `essentials.feed` |
+| `/flight` | `essentials.flight` |
+| `/disposal` (`/trash`, `/trashcan`) | `essentials.disposal` |
+| `/tpa` | `essentials.tpa` |
+| `/tpahere` | `essentials.tpahere` |
+| `/tpaccept` | `essentials.tpaccept` |
+| `/tpdeny` | `essentials.tpdeny` |
+| `/tpcancel` | `essentials.tpcancel` |
+| `/back` | `essentials.back` |
+| `/backpack` (`/bp`) | `essentials.backpack` |
+| `/backpacksee` (`/bpsee`) | `essentials.backpacksee` |
+| `/enderchestsee` (`/esee`) | `essentials.enderchestsee` |
+| `/inventorysee` (`/isee`) | `essentials.inventorysee` |
+| `/ban` | `essentials.ban` |
+| `/pardon` (`/unban`) | `essentials.pardon` |
+| `/ban-ip` (`/banip`) | `essentials.banip` |
+| `/pardon-ip` (`/unban-ip`) | `essentials.pardonip` |
+| `/kick` | `essentials.kick` |
+| `/history` (`/audit`) | `essentials.history` |
+
+Granular capabilities use these sub-permissions:
+
+| Capability | Permission node |
+| --- | --- |
+| Use `/repair <target>` | `essentials.repair.others` |
+| Use `/heal <target>` | `essentials.heal.others` |
+| Use `/feed <target>` | `essentials.feed.others` |
+| Use `/flight <target>` | `essentials.flight.others` |
+| Use `/tpahere all` | `essentials.tpahere.all` |
+
+Without a permission provider, each sub-permission uses its owning command's existing `access` result; it does
+not add a new access tier or require any permission configuration.
+
 ## Build from source
 
 ```bash

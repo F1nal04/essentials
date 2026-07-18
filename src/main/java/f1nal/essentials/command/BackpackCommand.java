@@ -23,11 +23,11 @@ public final class BackpackCommand {
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher, CommandBuildContext registryAccess, Commands.CommandSelection environment, CommandConfig.CommandSettings settings) {
         LiteralCommandNode<CommandSourceStack> backpack = dispatcher.register(Commands.literal("backpack")
-                .requires(settings.getPermissionRequirement())
+                .requires(settings.getPermissionRequirement("backpack"))
                 .executes(ctx -> openBackpack(ctx.getSource(), ctx.getSource().getPlayer())));
 
         dispatcher.register(Commands.literal("bp")
-                .requires(settings.getPermissionRequirement())
+                .requires(settings.getPermissionRequirement("bp"))
                 .executes(backpack.getCommand())
                 .redirect(backpack));
     }

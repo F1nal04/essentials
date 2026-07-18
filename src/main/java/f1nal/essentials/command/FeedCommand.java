@@ -18,9 +18,10 @@ public final class FeedCommand {
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher, CommandBuildContext registryAccess, Commands.CommandSelection environment, CommandConfig.CommandSettings settings) {
         LiteralArgumentBuilder<CommandSourceStack> root = Commands.literal("feed")
-                .requires(settings.getPermissionRequirement())
+                .requires(settings.getPermissionRequirement("feed"))
                 .executes(ctx -> feed(ctx.getSource(), ctx.getSource().getPlayer()))
                 .then(Commands.argument("target", EntityArgument.player())
+                        .requires(settings.getPermissionRequirement("feed.others"))
                         .executes(ctx -> feed(ctx.getSource(), EntityArgument.getPlayer(ctx, "target"))));
 
         dispatcher.register(root);

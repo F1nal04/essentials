@@ -28,7 +28,7 @@ public final class KickCommand {
             Commands.CommandSelection environment,
             CommandConfig.CommandSettings settings) {
         dispatcher.register(Commands.literal("kick")
-                .requires(settings.getPermissionRequirement())
+                .requires(settings.getPermissionRequirement("kick"))
                 .then(Commands.argument("player", EntityArgument.player())
                         .then(Commands.argument("reason", StringArgumentType.greedyString())
                                 .executes(ctx -> kick(

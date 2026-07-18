@@ -29,14 +29,14 @@ public final class PardonCommand {
             CommandConfig.CommandSettings settings) {
         LiteralCommandNode<CommandSourceStack> pardon = dispatcher.register(
                 Commands.literal("pardon")
-                        .requires(settings.getPermissionRequirement())
+                        .requires(settings.getPermissionRequirement("pardon"))
                         .then(Commands.argument("player", GameProfileArgument.gameProfile())
                                 .executes(ctx -> pardon(
                                         ctx.getSource(),
                                         GameProfileArgument.getGameProfiles(ctx, "player")))));
 
         dispatcher.register(Commands.literal("unban")
-                .requires(settings.getPermissionRequirement())
+                .requires(settings.getPermissionRequirement("unban"))
                 .redirect(pardon));
     }
 

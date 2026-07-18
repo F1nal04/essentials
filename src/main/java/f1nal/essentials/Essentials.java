@@ -29,6 +29,7 @@ import f1nal.essentials.config.ConfigMigrator;
 import f1nal.essentials.moderation.ModerationManager;
 import f1nal.essentials.mixin.ServerCommonPacketListenerAccessor;
 import f1nal.essentials.moderation.IpAddressUtil;
+import f1nal.essentials.permission.EssentialsPermissions;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
@@ -44,6 +45,7 @@ public class Essentials implements ModInitializer {
     @Override
     public void onInitialize() {
         ConfigMigrator.run();
+        EssentialsPermissions.logDetectedProvider();
         registerCommands();
         registerLifecycleEvents();
         LOGGER.info("Essentials initialized");

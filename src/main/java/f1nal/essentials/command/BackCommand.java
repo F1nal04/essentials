@@ -17,7 +17,7 @@ public final class BackCommand {
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher, CommandBuildContext registryAccess, Commands.CommandSelection environment, CommandConfig.CommandSettings settings) {
         dispatcher.register(Commands.literal("back")
-                .requires(settings.getPermissionRequirement())
+                .requires(settings.getPermissionRequirement("back"))
                 .executes(BackCommand::back));
     }
 

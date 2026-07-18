@@ -32,31 +32,32 @@ public final class TpaCommands {
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher, CommandBuildContext registryAccess, Commands.CommandSelection environment, CommandConfig.CommandSettings settings) {
         LiteralArgumentBuilder<CommandSourceStack> tpa = Commands.literal("tpa")
-                .requires(settings.getPermissionRequirement())
+                .requires(settings.getPermissionRequirement("tpa"))
                 .then(Commands.argument("target", EntityArgument.player())
                         .executes(ctx -> sendTpa(ctx, EntityArgument.getPlayer(ctx, "target"))));
 
         LiteralArgumentBuilder<CommandSourceStack> tpahere = Commands.literal("tpahere")
-                .requires(settings.getPermissionRequirement())
+                .requires(settings.getPermissionRequirement("tpahere"))
                 .then(Commands.literal("all")
+                        .requires(settings.getPermissionRequirement("tpahere.all"))
                         .executes(TpaCommands::sendTpahereAll))
                 .then(Commands.argument("target", EntityArgument.player())
                         .executes(ctx -> sendTpahere(ctx, EntityArgument.getPlayer(ctx, "target"))));
 
         LiteralArgumentBuilder<CommandSourceStack> tpaccept = Commands.literal("tpaccept")
-                .requires(settings.getPermissionRequirement())
+                .requires(settings.getPermissionRequirement("tpaccept"))
                 .executes(ctx -> accept(ctx, null))
                 .then(Commands.argument("player", EntityArgument.player())
                         .executes(ctx -> accept(ctx, EntityArgument.getPlayer(ctx, "player"))));
 
         LiteralArgumentBuilder<CommandSourceStack> tpdeny = Commands.literal("tpdeny")
-                .requires(settings.getPermissionRequirement())
+                .requires(settings.getPermissionRequirement("tpdeny"))
                 .executes(ctx -> deny(ctx, null))
                 .then(Commands.argument("player", EntityArgument.player())
                         .executes(ctx -> deny(ctx, EntityArgument.getPlayer(ctx, "player"))));
 
         LiteralArgumentBuilder<CommandSourceStack> tpcancel = Commands.literal("tpcancel")
-                .requires(settings.getPermissionRequirement())
+                .requires(settings.getPermissionRequirement("tpcancel"))
                 .executes(TpaCommands::cancel);
 
         dispatcher.register(tpa);

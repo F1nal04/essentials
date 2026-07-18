@@ -18,9 +18,10 @@ public final class HealCommand {
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher, CommandBuildContext registryAccess, Commands.CommandSelection environment, CommandConfig.CommandSettings settings) {
         LiteralArgumentBuilder<CommandSourceStack> root = Commands.literal("heal")
-                .requires(settings.getPermissionRequirement())
+                .requires(settings.getPermissionRequirement("heal"))
                 .executes(ctx -> heal(ctx.getSource(), ctx.getSource().getPlayer()))
                 .then(Commands.argument("target", EntityArgument.player())
+                        .requires(settings.getPermissionRequirement("heal.others"))
                         .executes(ctx -> heal(ctx.getSource(), EntityArgument.getPlayer(ctx, "target"))));
 
         dispatcher.register(root);

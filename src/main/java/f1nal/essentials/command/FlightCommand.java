@@ -18,9 +18,10 @@ public final class FlightCommand {
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher, CommandBuildContext registryAccess, Commands.CommandSelection environment, CommandConfig.CommandSettings settings) {
         LiteralArgumentBuilder<CommandSourceStack> root = Commands.literal("flight")
-                .requires(settings.getPermissionRequirement())
+                .requires(settings.getPermissionRequirement("flight"))
                 .executes(ctx -> toggleFlight(ctx.getSource(), ctx.getSource().getPlayer()))
                 .then(Commands.argument("target", EntityArgument.player())
+                        .requires(settings.getPermissionRequirement("flight.others"))
                         .executes(ctx -> toggleFlight(ctx.getSource(), EntityArgument.getPlayer(ctx, "target"))));
 
         dispatcher.register(root);

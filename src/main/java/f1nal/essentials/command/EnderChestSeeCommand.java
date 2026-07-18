@@ -22,10 +22,10 @@ public final class EnderChestSeeCommand {
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher, CommandBuildContext registryAccess, Commands.CommandSelection environment, CommandConfig.CommandSettings settings) {
         LiteralCommandNode<CommandSourceStack> enderChestSee = dispatcher.register(
-                command("enderchestsee").requires(settings.getPermissionRequirement()));
+                command("enderchestsee").requires(settings.getPermissionRequirement("enderchestsee")));
 
         dispatcher.register(Commands.literal("esee")
-                .requires(settings.getPermissionRequirement())
+                .requires(settings.getPermissionRequirement("esee"))
                 .redirect(enderChestSee));
     }
 

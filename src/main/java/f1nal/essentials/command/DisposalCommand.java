@@ -22,15 +22,15 @@ public final class DisposalCommand {
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher, CommandBuildContext registryAccess, Commands.CommandSelection environment, CommandConfig.CommandSettings settings) {
         LiteralCommandNode<CommandSourceStack> disposal = dispatcher.register(Commands.literal("disposal")
-                .requires(settings.getPermissionRequirement())
+                .requires(settings.getPermissionRequirement("disposal"))
                 .executes(ctx -> openDisposal(ctx.getSource(), ctx.getSource().getPlayer())));
 
         dispatcher.register(Commands.literal("trash")
-                .requires(settings.getPermissionRequirement())
+                .requires(settings.getPermissionRequirement("trash"))
                 .executes(disposal.getCommand())
                 .redirect(disposal));
         dispatcher.register(Commands.literal("trashcan")
-                .requires(settings.getPermissionRequirement())
+                .requires(settings.getPermissionRequirement("trashcan"))
                 .executes(disposal.getCommand())
                 .redirect(disposal));
     }

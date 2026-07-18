@@ -19,9 +19,10 @@ public final class RepairCommand {
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher, CommandBuildContext registryAccess, Commands.CommandSelection environment, CommandConfig.CommandSettings settings) {
         LiteralArgumentBuilder<CommandSourceStack> root = Commands.literal("repair")
-                .requires(settings.getPermissionRequirement())
+                .requires(settings.getPermissionRequirement("repair"))
                 .executes(ctx -> repair(ctx.getSource(), ctx.getSource().getPlayer()))
                 .then(Commands.argument("target", EntityArgument.player())
+                        .requires(settings.getPermissionRequirement("repair.others"))
                         .executes(ctx -> repair(ctx.getSource(), EntityArgument.getPlayer(ctx, "target"))));
 
         dispatcher.register(root);

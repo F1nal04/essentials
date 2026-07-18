@@ -33,10 +33,10 @@ public final class InventorySeeCommand {
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher, CommandBuildContext registryAccess, Commands.CommandSelection environment, CommandConfig.CommandSettings settings) {
         LiteralCommandNode<CommandSourceStack> inventorySee = dispatcher.register(
-                command("inventorysee").requires(settings.getPermissionRequirement()));
+                command("inventorysee").requires(settings.getPermissionRequirement("inventorysee")));
 
         dispatcher.register(Commands.literal("isee")
-                .requires(settings.getPermissionRequirement())
+                .requires(settings.getPermissionRequirement("isee"))
                 .redirect(inventorySee));
     }
 

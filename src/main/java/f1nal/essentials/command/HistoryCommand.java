@@ -42,7 +42,7 @@ public final class HistoryCommand {
             CommandConfig.CommandSettings settings) {
         LiteralCommandNode<CommandSourceStack> history = dispatcher.register(
                 Commands.literal("history")
-                        .requires(settings.getPermissionRequirement())
+                        .requires(settings.getPermissionRequirement("history"))
                         .then(Commands.argument("player", GameProfileArgument.gameProfile())
                                 .executes(ctx -> history(
                                         ctx.getSource(),
@@ -73,7 +73,7 @@ public final class HistoryCommand {
                                                         IntegerArgumentType.getInteger(ctx, "page")))))));
 
         dispatcher.register(Commands.literal("audit")
-                .requires(settings.getPermissionRequirement())
+                .requires(settings.getPermissionRequirement("audit"))
                 .redirect(history));
     }
 

@@ -39,10 +39,10 @@ public final class BackpackSeeCommand {
             CommandBuildContext registryAccess, Commands.CommandSelection environment,
             CommandConfig.CommandSettings settings) {
         LiteralCommandNode<CommandSourceStack> backpackSee = dispatcher.register(
-                command("backpacksee").requires(settings.getPermissionRequirement()));
+                command("backpacksee").requires(settings.getPermissionRequirement("backpacksee")));
 
         dispatcher.register(Commands.literal("bpsee")
-                .requires(settings.getPermissionRequirement())
+                .requires(settings.getPermissionRequirement("bpsee"))
                 .redirect(backpackSee));
     }
 

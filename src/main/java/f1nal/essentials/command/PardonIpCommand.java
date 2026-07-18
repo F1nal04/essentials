@@ -28,14 +28,14 @@ public final class PardonIpCommand {
             CommandConfig.CommandSettings settings) {
         LiteralCommandNode<CommandSourceStack> pardonIp = dispatcher.register(
                 Commands.literal("pardon-ip")
-                        .requires(settings.getPermissionRequirement())
+                        .requires(settings.getPermissionRequirement("pardon-ip"))
                         .then(Commands.argument("address", StringArgumentType.string())
                                 .executes(ctx -> pardonIp(
                                         ctx.getSource(),
                                         StringArgumentType.getString(ctx, "address")))));
 
         dispatcher.register(Commands.literal("unban-ip")
-                .requires(settings.getPermissionRequirement())
+                .requires(settings.getPermissionRequirement("unban-ip"))
                 .redirect(pardonIp));
     }
 

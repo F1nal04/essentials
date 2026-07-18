@@ -37,7 +37,7 @@ public final class BanIpCommand {
             CommandConfig.CommandSettings settings) {
         LiteralCommandNode<CommandSourceStack> banIp = dispatcher.register(
                 Commands.literal("ban-ip")
-                        .requires(settings.getPermissionRequirement())
+                        .requires(settings.getPermissionRequirement("ban-ip"))
                         .then(Commands.argument("address-or-player", StringArgumentType.string())
                                 .then(Commands.argument("duration", StringArgumentType.word())
                                         .then(Commands.argument("reason", StringArgumentType.greedyString())
@@ -49,7 +49,7 @@ public final class BanIpCommand {
                                                         StringArgumentType.getString(ctx, "reason")))))));
 
         dispatcher.register(Commands.literal("banip")
-                .requires(settings.getPermissionRequirement())
+                .requires(settings.getPermissionRequirement("banip"))
                 .redirect(banIp));
     }
 
