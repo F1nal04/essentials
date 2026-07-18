@@ -35,4 +35,12 @@ class PermissionDecisionTest {
         assertTrue(PermissionDecision.resolve(Boolean.FALSE, true, false));
         assertFalse(PermissionDecision.resolve(Boolean.TRUE, false, false));
     }
+
+    @Test
+    void updateNotificationUsesProviderDecisionThenOpFallback() {
+        assertTrue(PermissionDecision.resolve(Boolean.TRUE, false, true));
+        assertFalse(PermissionDecision.resolve(Boolean.FALSE, true, true));
+        assertTrue(PermissionDecision.resolve(null, true, true));
+        assertFalse(PermissionDecision.resolve(null, false, true));
+    }
 }

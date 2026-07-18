@@ -30,6 +30,22 @@ moderation:
   # Placeholders: {player}, {reason}, {moderator}
   kick_message: "&cYou were kicked from this server.\n&7Reason: &f{reason}"
 
+updates:
+  # Check Modrinth once, asynchronously, after each server start.
+  enabled: true
+  # Channel: stable_only | include_prereleases
+  channel: "stable_only"
+  console_notifications: true
+  player_notifications: true
+  # Used when no permission provider supplies essentials.update.notify.
+  op_fallback: true
+  # Values outside these safe ranges are clamped (timeout: 2-30, delay: 0-300).
+  request_timeout_seconds: 5
+  startup_delay_seconds: 10
+  # Placeholders: {installed_version}, {latest_version}, {channel}, {download_link}
+  notification_text: "Update available: {installed_version} -> {latest_version} ({channel}). {download_link}"
+  clickable_link: true
+
 commands:
   # Access: op | all
   repair:

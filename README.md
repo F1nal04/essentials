@@ -53,6 +53,7 @@ The backpack has three modes, set via `backpack.mode` in the config:
 - **Back Command**: Return to your previous position after TPA teleports with a configurable time window
 - **Admin Inventory Views**: `/inventorysee` and `/enderchestsee` give operators editable views into online and offline players' inventories and ender chests
 - **Persistent Moderation**: Timed and permanent player/IP bans and the always-on kick audit log are stored in SQLite, survive restarts, and can be reviewed with `/history` or `/audit`
+- **Update Notifications**: After startup, one asynchronous Modrinth check can notify the console and authorized online operators about newer compatible releases
 
 ## Installation (Fabric)
 
@@ -108,6 +109,18 @@ The TPA system includes the following configurable options:
 
 Every command can be enabled/disabled and have its access level configured (`op`/`all`) in the `commands` section.
 
+### Update Checks
+
+The `updates` section controls the once-per-start Modrinth update check. It is enabled by default, accepts stable
+releases only, waits 10 seconds after startup, and uses a 5-second request timeout. Set `channel` to
+`include_prereleases` to consider beta and alpha versions. Console and player notifications can be disabled
+independently, and `notification_text` supports `{installed_version}`, `{latest_version}`, `{channel}`, and
+`{download_link}`. The link can be made non-clickable with `clickable_link: false`.
+
+Players require `essentials.update.notify`; when no permission provider supplies a value, `op_fallback: true`
+grants the notification to operators. Each eligible player is notified at most once per server session, including
+when they join after the check finishes. The checker never downloads or installs files.
+
 When a supported Fabric permission provider such as LuckPerms is installed, Essentials automatically uses the
 nodes below. A provider grant or denial takes precedence over `access`. If no provider supplies a result, the
 existing `access: op|all` check remains the fallback, so current servers keep the same behavior and configuration.
@@ -136,6 +149,7 @@ Aliases always use their primary command's node. Console execution is unchanged.
 | `/pardon-ip` (`/unban-ip`) | `essentials.pardonip` |
 | `/kick` | `essentials.kick` |
 | `/history` (`/audit`) | `essentials.history` |
+| Update availability notifications | `essentials.update.notify` |
 
 Granular capabilities use these sub-permissions:
 

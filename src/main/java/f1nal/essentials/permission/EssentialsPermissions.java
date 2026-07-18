@@ -7,6 +7,8 @@ import f1nal.essentials.Essentials;
 import net.fabricmc.fabric.api.permission.v1.PermissionNode;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.players.NameAndId;
 
 /** Stable permission nodes and provider-aware command requirements. */
 public final class EssentialsPermissions {
@@ -37,6 +39,15 @@ public final class EssentialsPermissions {
             throw new IllegalArgumentException("Invalid Essentials permission path: " + path);
         }
         return PermissionNode.of(Essentials.MOD_ID, path);
+    }
+
+    /** Provider-aware update notification permission with configurable OP fallback. */
+    public static boolean canReceiveUpdateNotification(ServerPlayer player, boolean opFallback) {
+        Boolean providerResult = player.createCommandSourceStack()
+                .checkPermission(node("update.notify"));
+        boolean legacyAllowed = opFallback && player.level().getServer().getPlayerList().isOp(
+                new NameAndId(player.getUUID(), player.getName().getString()));
+        return PermissionDecision.resolve(providerResult, legacyAllowed, true);
     }
 
     public static void logDetectedProvider() {

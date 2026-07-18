@@ -63,6 +63,12 @@ The configuration is generated at `config/essentials/essentials.yaml`. Changes t
 | `tpa.cooldown_seconds` | `10` | Cooldown after cancelling a teleport request |
 | `moderation.ban_message` | Included in generated config | Disconnect message used for player and IP bans |
 | `moderation.kick_message` | Included in generated config | Disconnect message used for kicks |
+| `updates.enabled` | `true` | Runs one asynchronous compatible-release check after startup |
+| `updates.channel` | `stable_only` | Accepts stable releases only or includes prereleases |
+| `updates.console_notifications` | `true` | Logs an available update to the server console |
+| `updates.player_notifications` | `true` | Notifies authorized online players once per session |
+| `updates.request_timeout_seconds` | `5` | Network timeout, clamped to 2-30 seconds |
+| `updates.startup_delay_seconds` | `10` | Post-start delay, clamped to 0-300 seconds |
 | `commands.<name>.enabled` | `true` | Enables or disables a command group |
 | `commands.<name>.access` | `op` or `all` | Restricts the command group to operators or allows everyone |
 

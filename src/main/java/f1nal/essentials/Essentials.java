@@ -30,6 +30,7 @@ import f1nal.essentials.moderation.ModerationManager;
 import f1nal.essentials.mixin.ServerCommonPacketListenerAccessor;
 import f1nal.essentials.moderation.IpAddressUtil;
 import f1nal.essentials.permission.EssentialsPermissions;
+import f1nal.essentials.update.UpdateManager;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
@@ -185,10 +186,12 @@ public class Essentials implements ModInitializer {
                 throw new IllegalStateException("Essentials moderation database could not be initialized", e);
             }
             BackpackManager.initialize(server);
+            UpdateManager.start(server);
         });
 
         // Save all backpacks when server stops
         ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
+            UpdateManager.stop();
             BackpackSeeCommand.finishAll();
             BackpackManager.saveAll(server);
             f1nal.essentials.command.OfflinePlayerDataManager.finishAll();
@@ -236,5 +239,8 @@ public class Essentials implements ModInitializer {
             }
             f1nal.essentials.command.OfflinePlayerDataManager.finishForViewer(playerId);
         });
+
+        ServerPlayConnectionEvents.JOIN.register((handler, sender, server) ->
+                UpdateManager.onPlayerJoin(handler.getPlayer()));
     }
 }
