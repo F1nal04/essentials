@@ -23,10 +23,15 @@ import f1nal.essentials.command.PardonCommand;
 import f1nal.essentials.command.PardonIpCommand;
 import f1nal.essentials.command.RepairCommand;
 import f1nal.essentials.command.TpaCommands;
+import f1nal.essentials.command.WarnCommand;
+import f1nal.essentials.command.MuteCommand;
+import f1nal.essentials.command.UnmuteCommand;
+import f1nal.essentials.command.NoteCommand;
 import f1nal.essentials.config.CommandConfig;
 import f1nal.essentials.config.CommandConfig.CommandSettings;
 import f1nal.essentials.config.ConfigMigrator;
 import f1nal.essentials.moderation.ModerationManager;
+import f1nal.essentials.moderation.MuteEnforcement;
 import f1nal.essentials.mixin.ServerCommonPacketListenerAccessor;
 import f1nal.essentials.moderation.IpAddressUtil;
 import f1nal.essentials.permission.EssentialsPermissions;
@@ -49,6 +54,7 @@ public class Essentials implements ModInitializer {
         EssentialsPermissions.logDetectedProvider();
         registerCommands();
         registerLifecycleEvents();
+        MuteEnforcement.register();
         LOGGER.info("Essentials initialized");
     }
 
@@ -173,6 +179,27 @@ public class Essentials implements ModInitializer {
             CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment)
                     -> HistoryCommand.register(dispatcher, registryAccess, environment, historySettings)
             );
+        }
+
+        CommandSettings warnSettings = commandSettings.get("warn");
+        if (warnSettings != null && warnSettings.enabled()) {
+            CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment)
+                    -> WarnCommand.register(dispatcher, registryAccess, environment, warnSettings));
+        }
+        CommandSettings muteSettings = commandSettings.get("mute");
+        if (muteSettings != null && muteSettings.enabled()) {
+            CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment)
+                    -> MuteCommand.register(dispatcher, registryAccess, environment, muteSettings));
+        }
+        CommandSettings unmuteSettings = commandSettings.get("unmute");
+        if (unmuteSettings != null && unmuteSettings.enabled()) {
+            CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment)
+                    -> UnmuteCommand.register(dispatcher, registryAccess, environment, unmuteSettings));
+        }
+        CommandSettings noteSettings = commandSettings.get("note");
+        if (noteSettings != null && noteSettings.enabled()) {
+            CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment)
+                    -> NoteCommand.register(dispatcher, registryAccess, environment, noteSettings));
         }
     }
 

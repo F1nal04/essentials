@@ -108,6 +108,29 @@ class ModerationServiceTest {
         }
     }
 
+    @Test
+    void temporaryAndPermanentMutesUseCacheAndPersistRevocation() throws Exception {
+        MutableClock clock = new MutableClock(60_000L);
+        UUID temporary = UUID.randomUUID();
+        UUID permanent = UUID.randomUUID();
+        Moderator moderator = new Moderator(null, "CONSOLE");
+
+        try (ModerationService service = ModerationService.open(
+                tempDir.resolve("essentials.db"), clock)) {
+            assertTrue(service.mute(
+                    temporary, "Temporary", "Spam", BanDuration.timed(1_000L), moderator)
+                    .isPresent());
+            assertTrue(service.mute(
+                    permanent, "Permanent", "Abuse", BanDuration.permanentBan(), moderator)
+                    .isPresent());
+            clock.setMillis(61_000L);
+            assertTrue(service.activeMute(temporary).isEmpty());
+            assertTrue(service.activeMute(permanent).orElseThrow().permanent());
+            assertTrue(service.unmute(permanent, moderator));
+            assertFalse(service.unmute(permanent, moderator));
+        }
+    }
+
     private static final class MutableClock extends Clock {
         private long millis;
 

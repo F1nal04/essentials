@@ -163,6 +163,66 @@ public final class ModerationDatabase implements AutoCloseable {
                     CREATE INDEX IF NOT EXISTS kicks_target_time
                     ON kicks(target_uuid, kicked_at_ms DESC)
                     """);
+            statement.execute("""
+                    CREATE TABLE IF NOT EXISTS warnings (
+                        id INTEGER PRIMARY KEY,
+                        target_uuid TEXT NOT NULL,
+                        target_name TEXT NOT NULL,
+                        reason TEXT NOT NULL,
+                        issued_at_ms INTEGER NOT NULL,
+                        moderator_uuid TEXT,
+                        moderator_name TEXT NOT NULL
+                    )
+                    """);
+            statement.execute("""
+                    CREATE INDEX IF NOT EXISTS warnings_target_time
+                    ON warnings(target_uuid, issued_at_ms DESC)
+                    """);
+            statement.execute("""
+                    CREATE TABLE IF NOT EXISTS mutes (
+                        id INTEGER PRIMARY KEY,
+                        target_uuid TEXT NOT NULL,
+                        target_name TEXT NOT NULL,
+                        reason TEXT NOT NULL,
+                        issued_at_ms INTEGER NOT NULL,
+                        expires_at_ms INTEGER,
+                        moderator_uuid TEXT,
+                        moderator_name TEXT NOT NULL,
+                        state TEXT NOT NULL DEFAULT 'ACTIVE'
+                            CHECK (state IN ('ACTIVE', 'EXPIRED', 'REVOKED')),
+                        revoked_at_ms INTEGER,
+                        revoked_by_uuid TEXT,
+                        revoked_by_name TEXT,
+                        CHECK (expires_at_ms IS NULL OR expires_at_ms > issued_at_ms)
+                    )
+                    """);
+            statement.execute("""
+                    CREATE UNIQUE INDEX IF NOT EXISTS mutes_one_active_per_player
+                    ON mutes(target_uuid) WHERE state = 'ACTIVE'
+                    """);
+            statement.execute("""
+                    CREATE INDEX IF NOT EXISTS mutes_active_expiration
+                    ON mutes(state, expires_at_ms)
+                    """);
+            statement.execute("""
+                    CREATE INDEX IF NOT EXISTS mutes_target_time
+                    ON mutes(target_uuid, issued_at_ms DESC)
+                    """);
+            statement.execute("""
+                    CREATE TABLE IF NOT EXISTS staff_notes (
+                        id INTEGER PRIMARY KEY,
+                        target_uuid TEXT NOT NULL,
+                        target_name TEXT NOT NULL,
+                        note_text TEXT NOT NULL,
+                        created_at_ms INTEGER NOT NULL,
+                        moderator_uuid TEXT,
+                        moderator_name TEXT NOT NULL
+                    )
+                    """);
+            statement.execute("""
+                    CREATE INDEX IF NOT EXISTS staff_notes_target_time
+                    ON staff_notes(target_uuid, created_at_ms DESC)
+                    """);
             createIpBansTable(statement);
             statement.execute("""
                     CREATE UNIQUE INDEX IF NOT EXISTS ip_bans_one_active_per_address
@@ -484,6 +544,175 @@ public final class ModerationDatabase implements AutoCloseable {
         }
     }
 
+    public synchronized WarningRecord insertWarning(
+            UUID targetUuid,
+            String targetName,
+            String reason,
+            long issuedAtMs,
+            Moderator moderator) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement("""
+                INSERT INTO warnings(
+                    target_uuid, target_name, reason, issued_at_ms,
+                    moderator_uuid, moderator_name
+                ) VALUES (?, ?, ?, ?, ?, ?)
+                """, Statement.RETURN_GENERATED_KEYS)) {
+            statement.setString(1, targetUuid.toString());
+            statement.setString(2, targetName);
+            statement.setString(3, reason);
+            statement.setLong(4, issuedAtMs);
+            setNullableUuid(statement, 5, moderator.uuid());
+            statement.setString(6, moderator.name());
+            statement.executeUpdate();
+            try (ResultSet keys = statement.getGeneratedKeys()) {
+                if (!keys.next()) {
+                    throw new SQLException("SQLite did not return the inserted warning ID");
+                }
+                return new WarningRecord(
+                        keys.getLong(1), targetUuid, targetName, reason, issuedAtMs,
+                        moderator.uuid(), moderator.name());
+            }
+        }
+    }
+
+    public synchronized long countWarningsSince(UUID targetUuid, long sinceMs) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement("""
+                SELECT COUNT(*) FROM warnings
+                WHERE target_uuid = ? AND issued_at_ms >= ?
+                """)) {
+            statement.setString(1, targetUuid.toString());
+            statement.setLong(2, sinceMs);
+            try (ResultSet result = statement.executeQuery()) {
+                return result.next() ? result.getLong(1) : 0;
+            }
+        }
+    }
+
+    public synchronized List<MuteRecord> loadActiveMutes(long nowMs) throws SQLException {
+        return inTransaction(() -> {
+            expireMutes(nowMs);
+            List<MuteRecord> mutes = new ArrayList<>();
+            try (PreparedStatement statement = connection.prepareStatement("""
+                    SELECT id, target_uuid, target_name, reason, issued_at_ms, expires_at_ms,
+                           moderator_uuid, moderator_name
+                    FROM mutes
+                    WHERE state = 'ACTIVE'
+                      AND (expires_at_ms IS NULL OR expires_at_ms > ?)
+                    """)) {
+                statement.setLong(1, nowMs);
+                try (ResultSet result = statement.executeQuery()) {
+                    while (result.next()) {
+                        mutes.add(readMute(result));
+                    }
+                }
+            }
+            return mutes;
+        });
+    }
+
+    public synchronized Optional<MuteRecord> insertMute(
+            UUID targetUuid,
+            String targetName,
+            String reason,
+            long issuedAtMs,
+            Long expiresAtMs,
+            Moderator moderator) throws SQLException {
+        return inTransaction(() -> {
+            expireMutes(issuedAtMs);
+            if (findActiveMute(targetUuid).isPresent()) {
+                return Optional.empty();
+            }
+            try (PreparedStatement statement = connection.prepareStatement("""
+                    INSERT INTO mutes(
+                        target_uuid, target_name, reason, issued_at_ms, expires_at_ms,
+                        moderator_uuid, moderator_name, state
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, 'ACTIVE')
+                    """, Statement.RETURN_GENERATED_KEYS)) {
+                statement.setString(1, targetUuid.toString());
+                statement.setString(2, targetName);
+                statement.setString(3, reason);
+                statement.setLong(4, issuedAtMs);
+                setNullableLong(statement, 5, expiresAtMs);
+                setNullableUuid(statement, 6, moderator.uuid());
+                statement.setString(7, moderator.name());
+                statement.executeUpdate();
+                try (ResultSet keys = statement.getGeneratedKeys()) {
+                    if (!keys.next()) {
+                        throw new SQLException("SQLite did not return the inserted mute ID");
+                    }
+                    return Optional.of(new MuteRecord(
+                            keys.getLong(1), targetUuid, targetName, reason, issuedAtMs,
+                            expiresAtMs, moderator.uuid(), moderator.name()));
+                }
+            }
+        });
+    }
+
+    public synchronized boolean revokeMute(
+            UUID targetUuid, long revokedAtMs, Moderator moderator) throws SQLException {
+        return inTransaction(() -> {
+            expireMutes(revokedAtMs);
+            Optional<MuteRecord> active = findActiveMute(targetUuid);
+            if (active.isEmpty()) {
+                return false;
+            }
+            try (PreparedStatement statement = connection.prepareStatement("""
+                    UPDATE mutes
+                    SET state = 'REVOKED', revoked_at_ms = ?,
+                        revoked_by_uuid = ?, revoked_by_name = ?
+                    WHERE id = ? AND state = 'ACTIVE'
+                    """)) {
+                statement.setLong(1, revokedAtMs);
+                setNullableUuid(statement, 2, moderator.uuid());
+                statement.setString(3, moderator.name());
+                statement.setLong(4, active.get().id());
+                return statement.executeUpdate() == 1;
+            }
+        });
+    }
+
+    private Optional<MuteRecord> findActiveMute(UUID targetUuid) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement("""
+                SELECT id, target_uuid, target_name, reason, issued_at_ms, expires_at_ms,
+                       moderator_uuid, moderator_name
+                FROM mutes WHERE target_uuid = ? AND state = 'ACTIVE'
+                """)) {
+            statement.setString(1, targetUuid.toString());
+            try (ResultSet result = statement.executeQuery()) {
+                return result.next() ? Optional.of(readMute(result)) : Optional.empty();
+            }
+        }
+    }
+
+    public synchronized StaffNoteRecord insertStaffNote(
+            UUID targetUuid,
+            String targetName,
+            String text,
+            long createdAtMs,
+            Moderator moderator) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement("""
+                INSERT INTO staff_notes(
+                    target_uuid, target_name, note_text, created_at_ms,
+                    moderator_uuid, moderator_name
+                ) VALUES (?, ?, ?, ?, ?, ?)
+                """, Statement.RETURN_GENERATED_KEYS)) {
+            statement.setString(1, targetUuid.toString());
+            statement.setString(2, targetName);
+            statement.setString(3, text);
+            statement.setLong(4, createdAtMs);
+            setNullableUuid(statement, 5, moderator.uuid());
+            statement.setString(6, moderator.name());
+            statement.executeUpdate();
+            try (ResultSet keys = statement.getGeneratedKeys()) {
+                if (!keys.next()) {
+                    throw new SQLException("SQLite did not return the inserted staff-note ID");
+                }
+                return new StaffNoteRecord(
+                        keys.getLong(1), targetUuid, targetName, text, createdAtMs,
+                        moderator.uuid(), moderator.name());
+            }
+        }
+    }
+
     public synchronized void insertKick(
             UUID targetUuid,
             String targetName,
@@ -520,6 +749,7 @@ public final class ModerationDatabase implements AutoCloseable {
         return inTransaction(() -> {
             expireBans(clock.millis());
             expireIpBans(clock.millis());
+            expireMutes(clock.millis());
             long totalRecords = countHistory(targetUuid, filter);
             return new AuditPage(queryHistory(targetUuid, filter, limit, offset), totalRecords);
         });
@@ -532,6 +762,9 @@ public final class ModerationDatabase implements AutoCloseable {
                         (SELECT COUNT(*) FROM bans WHERE target_uuid = ?)
                         + (SELECT COUNT(*) FROM kicks WHERE target_uuid = ?)
                         + (SELECT COUNT(*) FROM ip_bans WHERE target_uuid = ?)
+                        + (SELECT COUNT(*) FROM warnings WHERE target_uuid = ?)
+                        + (SELECT COUNT(*) FROM mutes WHERE target_uuid = ?)
+                        + (SELECT COUNT(*) FROM staff_notes WHERE target_uuid = ?)
                     """;
             case BANS -> """
                     SELECT
@@ -539,13 +772,16 @@ public final class ModerationDatabase implements AutoCloseable {
                         + (SELECT COUNT(*) FROM ip_bans WHERE target_uuid = ?)
                     """;
             case KICKS -> "SELECT COUNT(*) FROM kicks WHERE target_uuid = ?";
+            case WARNINGS -> "SELECT COUNT(*) FROM warnings WHERE target_uuid = ?";
+            case MUTES -> "SELECT COUNT(*) FROM mutes WHERE target_uuid = ?";
+            case NOTES -> "SELECT COUNT(*) FROM staff_notes WHERE target_uuid = ?";
         };
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setString(1, targetUuid.toString());
             int targetParameters = switch (filter) {
-                case ALL -> 3;
+                case ALL -> 6;
                 case BANS -> 2;
-                case KICKS -> 1;
+                case KICKS, WARNINGS, MUTES, NOTES -> 1;
             };
             for (int parameter = 2; parameter <= targetParameters; parameter++) {
                 statement.setString(parameter, targetUuid.toString());
@@ -585,6 +821,27 @@ public final class ModerationDatabase implements AutoCloseable {
                                moderator_uuid, moderator_name, state,
                                revoked_at_ms, revoked_by_uuid, revoked_by_name
                         FROM ip_bans WHERE target_uuid = ?
+                        UNION ALL
+                        SELECT id, 'WARNING' AS action, target_uuid, target_name,
+                               NULL AS address, reason, issued_at_ms AS occurred_at_ms,
+                               NULL AS expires_at_ms, moderator_uuid, moderator_name,
+                               NULL AS state, NULL AS revoked_at_ms,
+                               NULL AS revoked_by_uuid, NULL AS revoked_by_name
+                        FROM warnings WHERE target_uuid = ?
+                        UNION ALL
+                        SELECT id, 'MUTE' AS action, target_uuid, target_name,
+                               NULL AS address, reason, issued_at_ms AS occurred_at_ms,
+                               expires_at_ms, moderator_uuid, moderator_name, state,
+                               revoked_at_ms, revoked_by_uuid, revoked_by_name
+                        FROM mutes WHERE target_uuid = ?
+                        UNION ALL
+                        SELECT id, 'NOTE' AS action, target_uuid, target_name,
+                               NULL AS address, note_text AS reason,
+                               created_at_ms AS occurred_at_ms, NULL AS expires_at_ms,
+                               moderator_uuid, moderator_name, NULL AS state,
+                               NULL AS revoked_at_ms, NULL AS revoked_by_uuid,
+                               NULL AS revoked_by_name
+                        FROM staff_notes WHERE target_uuid = ?
                     )
                     ORDER BY occurred_at_ms DESC, id DESC, action ASC
                     LIMIT ? OFFSET ?
@@ -620,6 +877,33 @@ public final class ModerationDatabase implements AutoCloseable {
                     ORDER BY occurred_at_ms DESC, id DESC
                     LIMIT ? OFFSET ?
                     """;
+            case WARNINGS -> """
+                    SELECT id, 'WARNING' AS action, target_uuid, target_name,
+                           NULL AS address, reason, issued_at_ms AS occurred_at_ms,
+                           NULL AS expires_at_ms, moderator_uuid, moderator_name,
+                           NULL AS state, NULL AS revoked_at_ms,
+                           NULL AS revoked_by_uuid, NULL AS revoked_by_name
+                    FROM warnings WHERE target_uuid = ?
+                    ORDER BY occurred_at_ms DESC, id DESC LIMIT ? OFFSET ?
+                    """;
+            case MUTES -> """
+                    SELECT id, 'MUTE' AS action, target_uuid, target_name,
+                           NULL AS address, reason, issued_at_ms AS occurred_at_ms,
+                           expires_at_ms, moderator_uuid, moderator_name, state,
+                           revoked_at_ms, revoked_by_uuid, revoked_by_name
+                    FROM mutes WHERE target_uuid = ?
+                    ORDER BY occurred_at_ms DESC, id DESC LIMIT ? OFFSET ?
+                    """;
+            case NOTES -> """
+                    SELECT id, 'NOTE' AS action, target_uuid, target_name,
+                           NULL AS address, note_text AS reason,
+                           created_at_ms AS occurred_at_ms, NULL AS expires_at_ms,
+                           moderator_uuid, moderator_name, NULL AS state,
+                           NULL AS revoked_at_ms, NULL AS revoked_by_uuid,
+                           NULL AS revoked_by_name
+                    FROM staff_notes WHERE target_uuid = ?
+                    ORDER BY occurred_at_ms DESC, id DESC LIMIT ? OFFSET ?
+                    """;
         };
 
         List<AuditRecord> records = new ArrayList<>();
@@ -627,9 +911,9 @@ public final class ModerationDatabase implements AutoCloseable {
             int parameter = 1;
             statement.setString(parameter++, targetUuid.toString());
             int targetParameters = switch (filter) {
-                case ALL -> 3;
+                case ALL -> 6;
                 case BANS -> 2;
-                case KICKS -> 1;
+                case KICKS, WARNINGS, MUTES, NOTES -> 1;
             };
             while (parameter <= targetParameters) {
                 statement.setString(parameter++, targetUuid.toString());
@@ -677,6 +961,17 @@ public final class ModerationDatabase implements AutoCloseable {
         }
     }
 
+    private void expireMutes(long nowMs) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement("""
+                UPDATE mutes SET state = 'EXPIRED'
+                WHERE state = 'ACTIVE' AND expires_at_ms IS NOT NULL
+                  AND expires_at_ms <= ?
+                """)) {
+            statement.setLong(1, nowMs);
+            statement.executeUpdate();
+        }
+    }
+
     private static BanRecord readBan(ResultSet result) throws SQLException {
         try {
             String moderator = result.getString("moderator_uuid");
@@ -710,6 +1005,23 @@ public final class ModerationDatabase implements AutoCloseable {
                     result.getString("moderator_name"));
         } catch (IllegalArgumentException e) {
             throw new SQLException("Database contains an invalid IP-ban value", e);
+        }
+    }
+
+    private static MuteRecord readMute(ResultSet result) throws SQLException {
+        try {
+            String moderator = result.getString("moderator_uuid");
+            return new MuteRecord(
+                    result.getLong("id"),
+                    UUID.fromString(result.getString("target_uuid")),
+                    result.getString("target_name"),
+                    result.getString("reason"),
+                    result.getLong("issued_at_ms"),
+                    nullableLong(result, "expires_at_ms"),
+                    moderator == null ? null : UUID.fromString(moderator),
+                    result.getString("moderator_name"));
+        } catch (IllegalArgumentException e) {
+            throw new SQLException("Database contains an invalid mute UUID", e);
         }
     }
 

@@ -283,6 +283,46 @@ class ModerationDatabaseTest {
         }
     }
 
+    @Test
+    void persistsWarningsMutesRevocationsAndPrivateNotes() throws Exception {
+        Path path = tempDir.resolve("essentials.db");
+        UUID target = UUID.randomUUID();
+        Moderator issuer = new Moderator(UUID.randomUUID(), "Mod");
+        Moderator revoker = new Moderator(null, "CONSOLE");
+
+        try (ModerationDatabase database = ModerationDatabase.open(path, CLOCK)) {
+            database.insertWarning(target, "Target", "First", 900_000L, issuer);
+            database.insertWarning(target, "Target", "Second", 990_000L, issuer);
+            assertEquals(1, database.countWarningsSince(target, 950_000L));
+
+            assertTrue(database.insertMute(
+                    target, "Target", "Spam", 1_000_000L, null, issuer).isPresent());
+            assertTrue(database.insertMute(
+                    target, "Target", "Duplicate", 1_000_001L, null, issuer).isEmpty());
+            database.insertStaffNote(target, "Target", "Internal context", 1_010_000L, issuer);
+            assertTrue(database.revokeMute(target, 1_020_000L, revoker));
+
+            assertEquals(2, database.loadHistory(
+                    target, AuditFilter.WARNINGS, 10, 0).totalRecords());
+            AuditRecord mute = database.loadHistory(
+                    target, AuditFilter.MUTES, 10, 0).records().getFirst();
+            assertEquals("REVOKED", mute.state());
+            assertEquals("CONSOLE", mute.revokedByName());
+            AuditRecord note = database.loadHistory(
+                    target, AuditFilter.NOTES, 10, 0).records().getFirst();
+            assertEquals(AuditRecord.Action.NOTE, note.action());
+            assertEquals("Internal context", note.reason());
+            assertEquals(4, database.loadHistory(
+                    target, AuditFilter.ALL, 10, 0).totalRecords());
+        }
+
+        try (ModerationDatabase reopened = ModerationDatabase.open(path, CLOCK)) {
+            assertTrue(reopened.loadActiveMutes(CLOCK.millis()).isEmpty());
+            assertEquals(4, reopened.loadHistory(
+                    target, AuditFilter.ALL, 10, 0).totalRecords());
+        }
+    }
+
     private static void createReleasedSchema(Path path, UUID target, UUID moderator)
             throws Exception {
         try (var connection = DriverManager.getConnection("jdbc:sqlite:" + path.toAbsolutePath());

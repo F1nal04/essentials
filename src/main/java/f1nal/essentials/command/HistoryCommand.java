@@ -21,6 +21,8 @@ import f1nal.essentials.moderation.AuditRecord;
 import f1nal.essentials.moderation.BanRecord;
 import f1nal.essentials.moderation.IpBanRecord;
 import f1nal.essentials.moderation.ModerationManager;
+import f1nal.essentials.moderation.MuteRecord;
+import f1nal.essentials.permission.EssentialsPermissions;
 import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -54,6 +56,9 @@ public final class HistoryCommand {
                                             builder.suggest("all");
                                             builder.suggest("bans");
                                             builder.suggest("kicks");
+                                            builder.suggest("warnings");
+                                            builder.suggest("mutes");
+                                            builder.suggest("notes");
                                             return builder.buildFuture();
                                         })
                                         .executes(ctx -> history(
@@ -98,18 +103,25 @@ public final class HistoryCommand {
             source.sendFailure(Messages.error("Please specify exactly one player."));
             return 0;
         }
+        if (!canView(source, filter)) {
+            source.sendFailure(Messages.error(
+                    "You do not have permission to view this history category."));
+            return 0;
+        }
 
         NameAndId target = targets.iterator().next();
         int offset = (pageNumber - 1) * PAGE_SIZE;
         AuditPage page;
         Optional<BanRecord> activeBan;
         List<IpBanRecord> activeIpBans;
+        Optional<MuteRecord> activeMute;
         long nowMs;
         try {
             var moderation = ModerationManager.get();
             page = moderation.history(target.id(), filter, PAGE_SIZE, offset);
             activeBan = moderation.activeBan(target.id());
             activeIpBans = moderation.activeIpBans(target.id());
+            activeMute = moderation.activeMute(target.id());
             nowMs = moderation.nowMs();
         } catch (SQLException | IllegalStateException e) {
             Essentials.LOGGER.error("Failed to read moderation history for {}", target.id(), e);
@@ -132,14 +144,23 @@ public final class HistoryCommand {
                         + " — page " + pageNumber + "/" + totalPages
                         + " (" + page.totalRecords() + " records)"), false);
         ZoneId serverZone = ZoneId.systemDefault();
-        activeBan.ifPresent(ban -> source.sendSuccess(
-                () -> Messages.custom(AuditEntryFormatter.formatActiveBan(ban, nowMs, serverZone)),
-                false));
-        for (IpBanRecord ban : activeIpBans) {
-            source.sendSuccess(
+        if (filter == AuditFilter.ALL || filter == AuditFilter.BANS) {
+            activeBan.ifPresent(ban -> source.sendSuccess(
                     () -> Messages.custom(
-                            AuditEntryFormatter.formatActiveIpBan(ban, nowMs, serverZone)),
-                    false);
+                            AuditEntryFormatter.formatActiveBan(ban, nowMs, serverZone)),
+                    false));
+            for (IpBanRecord ban : activeIpBans) {
+                source.sendSuccess(
+                        () -> Messages.custom(
+                                AuditEntryFormatter.formatActiveIpBan(ban, nowMs, serverZone)),
+                        false);
+            }
+        }
+        if (filter == AuditFilter.ALL || filter == AuditFilter.MUTES) {
+            activeMute.ifPresent(mute -> source.sendSuccess(
+                    () -> Messages.custom(
+                            AuditEntryFormatter.formatActiveMute(mute, nowMs, serverZone)),
+                    false));
         }
         if (page.records().isEmpty()) {
             source.sendSuccess(() -> Messages.info("No matching moderation records."), false);
@@ -152,5 +173,25 @@ public final class HistoryCommand {
                     false);
         }
         return page.records().size();
+    }
+
+    private static boolean canView(CommandSourceStack source, AuditFilter filter) {
+        java.util.function.Predicate<CommandSourceStack> opFallback =
+                Commands.hasPermission(Commands.LEVEL_GAMEMASTERS);
+        return switch (filter) {
+            case BANS, KICKS -> true;
+            case WARNINGS -> EssentialsPermissions.require(
+                    "history.warnings", opFallback).test(source);
+            case MUTES -> EssentialsPermissions.require(
+                    "history.mutes", opFallback).test(source);
+            case NOTES -> EssentialsPermissions.require(
+                    "history.notes", opFallback).test(source);
+            case ALL -> EssentialsPermissions.require(
+                    "history.warnings", opFallback).test(source)
+                    && EssentialsPermissions.require(
+                            "history.mutes", opFallback).test(source)
+                    && EssentialsPermissions.require(
+                            "history.notes", opFallback).test(source);
+        };
     }
 }

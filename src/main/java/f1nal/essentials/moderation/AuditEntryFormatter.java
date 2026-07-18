@@ -25,13 +25,19 @@ public final class AuditEntryFormatter {
                 .ofPattern("dd/MM/uuuu HH:mm:ss z", Locale.ROOT)
                 .withZone(zone);
         String duration = record.action() == AuditRecord.Action.KICK
+                || record.action() == AuditRecord.Action.WARNING
+                || record.action() == AuditRecord.Action.NOTE
                 ? KICK_DURATION
                 : record.expiresAtMs() == null
                         ? "Permanent"
                         : DurationParser.formatDuration(record.durationMs());
-        ChatFormatting actionColor = record.action() == AuditRecord.Action.KICK
-                ? ChatFormatting.GOLD
-                : ChatFormatting.DARK_RED;
+        ChatFormatting actionColor = switch (record.action()) {
+            case KICK -> ChatFormatting.GOLD;
+            case WARNING -> ChatFormatting.YELLOW;
+            case NOTE -> ChatFormatting.AQUA;
+            case MUTE -> ChatFormatting.RED;
+            case BAN, IP_BAN -> ChatFormatting.DARK_RED;
+        };
         String actionLabel = record.action() == AuditRecord.Action.IP_BAN
                 ? "IP BAN"
                 : record.action().name();
@@ -89,6 +95,19 @@ public final class AuditEntryFormatter {
                 .append(value(ban.moderatorName()))
                 .append(label(" | Reason: "))
                 .append(value(ban.reason()));
+    }
+
+    public static Component formatActiveMute(MuteRecord mute, long nowMs, ZoneId zone) {
+        DateTimeFormatter timestamp = DateTimeFormatter
+                .ofPattern("dd/MM/uuuu HH:mm:ss z", Locale.ROOT)
+                .withZone(zone);
+        MutableComponent line = Component.literal("ACTIVE MUTE")
+                .withStyle(ChatFormatting.DARK_GREEN);
+        appendExpiration(line, mute.expiresAtMs(), nowMs, timestamp);
+        return line.append(label(" | By: "))
+                .append(value(mute.moderatorName()))
+                .append(label(" | Reason: "))
+                .append(value(mute.reason()));
     }
 
     private static void appendExpiration(

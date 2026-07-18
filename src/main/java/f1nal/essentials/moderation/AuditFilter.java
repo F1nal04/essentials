@@ -5,7 +5,10 @@ import java.util.Locale;
 public enum AuditFilter {
     ALL("all"),
     BANS("bans"),
-    KICKS("kicks");
+    KICKS("kicks"),
+    WARNINGS("warnings"),
+    MUTES("mutes"),
+    NOTES("notes");
 
     private final String argumentValue;
 
@@ -25,12 +28,16 @@ public enum AuditFilter {
             case "all" -> ALL;
             case "bans" -> BANS;
             case "kicks" -> KICKS;
+            case "warnings", "warns" -> WARNINGS;
+            case "mutes" -> MUTES;
+            case "notes" -> NOTES;
             default -> throw invalid(value);
         };
     }
 
     private static IllegalArgumentException invalid(String value) {
         return new IllegalArgumentException(
-                "Unknown history filter '" + value + "'. Use all, bans, or kicks.");
+                "Unknown history filter '" + value
+                        + "'. Use all, bans, kicks, warnings, mutes, or notes.");
     }
 }

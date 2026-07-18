@@ -30,7 +30,11 @@ The primary command is the configured command name. Aliases are shorter alternat
 | `/ban-ip <address-or-player> <duration\|permanent> <reason>` | `/banip` | Bans an IPv4/IPv6 address temporarily or permanently. IPv6 addresses must be quoted. An online player target bans both their account and current address. | Operators |
 | `/pardon-ip <address>` | `/unban-ip` | Revokes an active IP ban. IPv6 addresses must be quoted. | Operators |
 | `/kick <player> <reason>` | None | Disconnects an online player and records the moderation action. | Operators |
-| `/history <player> [all\|bans\|kicks] [page]` | `/audit` | Shows paginated moderation history for online or previously known offline players, including any active ban. | Operators |
+| `/warn <player> <reason>` | None | Records a warning for an online or previously known offline player. | Operators |
+| `/mute <player> <duration\|permanent> <reason>` | None | Temporarily or permanently blocks a player's configured communication channels. | Operators |
+| `/unmute <player>` | None | Revokes a player's active mute. | Operators |
+| `/note <player> <text>` | None | Adds a private, staff-only note without notifying the player. | Operators |
+| `/history <player> [all\|bans\|kicks\|warnings\|mutes\|notes] [page]` | `/audit` | Shows filtered, paginated moderation history and active moderation state. | Operators |
 
 `[target]` is optional. Defaults to executor.
 
@@ -52,7 +56,7 @@ The backpack has three modes, set via `backpack.mode` in the config:
 - **TPA System**: Full teleport request system with configurable timeouts, cooldowns, and smart request management
 - **Back Command**: Return to your previous position after TPA teleports with a configurable time window
 - **Admin Inventory Views**: `/inventorysee` and `/enderchestsee` give operators editable views into online and offline players' inventories and ender chests
-- **Persistent Moderation**: Timed and permanent player/IP bans and the always-on kick audit log are stored in SQLite, survive restarts, and can be reviewed with `/history` or `/audit`
+- **Persistent Moderation**: Bans, kicks, warnings, temporary/permanent mutes, revocations, and private staff notes are stored in SQLite, survive restarts, and can be reviewed with `/history` or `/audit`
 - **Update Notifications**: After startup, one asynchronous Modrinth check can notify the console and authorized online operators about newer compatible releases
 
 ## Installation (Fabric)
@@ -99,9 +103,12 @@ The TPA system includes the following configurable options:
 - Ban durations accept values such as `30m`, `2h`, `7d`, and `1d12h`; use `permanent` or `perm` for a ban that never expires.
 - The same `ban_message` is used for timed and permanent IP bans. `/ban-ip` accepts a literal address or the name of an online player; IPv6 addresses must be quoted (for example, `/ban-ip "2001:db8::10" permanent Proxy`). A player target atomically bans both their account and current address. `/banip` is an alias.
 - `kick_message` controls the message shown to a kicked player. It supports `{player}`, `{reason}`, and `{moderator}`.
+- Warning and mute feedback is controlled by `warning_message`, `mute_message`, `unmute_message`, `mute_blocked_message`, and `mute_expired_message`.
+- `mute_blocks_private_messages` controls whether mutes also block `/msg`, `/tell`, `/w`, and team messages. Public chat is always blocked while muted.
+- `warning_rolling_period` and `warning_alert_threshold` control the informational escalation count shown to staff. Essentials never applies an automatic punishment.
 - Minecraft ampersand formatting codes such as `&c` and `&l` are supported.
 - Kick audit logging is always enabled and has no configuration switch.
-- `/history <player>` shows all moderation entries and any active ban; add `bans` or `kicks` to filter them and a page number to navigate older entries (10 per page). `/audit` is an alias. Dates use `DD/MM/YYYY` in the server's timezone.
+- `/history <player>` shows moderation entries and active state; use `bans`, `kicks`, `warnings`, `mutes`, or `notes` to filter and a page number to navigate older entries (10 per page). Staff notes require their dedicated history permission even when `all` is selected. `/audit` is an alias. Dates use `DD/MM/YYYY` in the server's timezone.
 - `/pardon <player>` (alias `/unban`) revokes only the active player-account ban. It does not revoke a separate IP ban.
 - `/pardon-ip <address>` (alias `/unban-ip`) revokes only the active IP ban. IPv6 addresses must be quoted.
 
@@ -148,6 +155,10 @@ Aliases always use their primary command's node. Console execution is unchanged.
 | `/ban-ip` (`/banip`) | `essentials.banip` |
 | `/pardon-ip` (`/unban-ip`) | `essentials.pardonip` |
 | `/kick` | `essentials.kick` |
+| `/warn` | `essentials.warn` |
+| `/mute` | `essentials.mute` |
+| `/unmute` | `essentials.unmute` |
+| `/note` | `essentials.note` |
 | `/history` (`/audit`) | `essentials.history` |
 | Update availability notifications | `essentials.update.notify` |
 
@@ -160,6 +171,9 @@ Granular capabilities use these sub-permissions:
 | Use `/feed <target>` | `essentials.feed.others` |
 | Use `/flight <target>` | `essentials.flight.others` |
 | Use `/tpahere all` | `essentials.tpahere.all` |
+| View warning history and rolling counts | `essentials.history.warnings` |
+| View mute and revocation history | `essentials.history.mutes` |
+| View private staff notes | `essentials.history.notes` |
 
 Without a permission provider, each sub-permission uses its owning command's existing `access` result; it does
 not add a new access tier or require any permission configuration.

@@ -17,6 +17,9 @@ public final class ModerationService implements AutoCloseable {
     private final Clock clock;
     private final ConcurrentMap<UUID, BanRecord> activeBans = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, IpBanRecord> activeIpBans = new ConcurrentHashMap<>();
+    private final ConcurrentMap<UUID, MuteRecord> activeMutes = new ConcurrentHashMap<>();
+    private final ConcurrentMap<UUID, MuteRecord> expiredMuteNotifications =
+            new ConcurrentHashMap<>();
 
     private ModerationService(ModerationDatabase database, Clock clock) throws SQLException {
         this.database = database;
@@ -26,6 +29,9 @@ public final class ModerationService implements AutoCloseable {
         }
         for (IpBanRecord ban : database.loadActiveIpBans(clock.millis())) {
             activeIpBans.put(ban.address(), ban);
+        }
+        for (MuteRecord mute : database.loadActiveMutes(clock.millis())) {
+            activeMutes.put(mute.targetUuid(), mute);
         }
     }
 
@@ -184,6 +190,72 @@ public final class ModerationService implements AutoCloseable {
         database.insertKick(targetUuid, targetName, reason, clock.millis(), moderator);
     }
 
+    public WarningResult warn(
+            UUID targetUuid,
+            String targetName,
+            String reason,
+            long rollingPeriodMs,
+            Moderator moderator) throws SQLException {
+        long nowMs = clock.millis();
+        WarningRecord warning = database.insertWarning(
+                targetUuid, targetName, reason, nowMs, moderator);
+        long count = database.countWarningsSince(targetUuid, nowMs - rollingPeriodMs);
+        return new WarningResult(warning, count);
+    }
+
+    public Optional<MuteRecord> mute(
+            UUID targetUuid,
+            String targetName,
+            String reason,
+            BanDuration duration,
+            Moderator moderator) throws SQLException {
+        long issuedAtMs = clock.millis();
+        Long expiresAtMs = duration.expiresAt(issuedAtMs, "Mute");
+        Optional<MuteRecord> inserted = database.insertMute(
+                targetUuid, targetName, reason, issuedAtMs, expiresAtMs, moderator);
+        inserted.ifPresent(mute -> {
+            expiredMuteNotifications.remove(targetUuid);
+            activeMutes.put(targetUuid, mute);
+        });
+        return inserted;
+    }
+
+    public Optional<MuteRecord> activeMute(UUID targetUuid) {
+        MuteRecord mute = activeMutes.get(targetUuid);
+        if (mute == null) {
+            return Optional.empty();
+        }
+        if (!mute.permanent() && mute.expiresAtMs() <= clock.millis()) {
+            if (activeMutes.remove(targetUuid, mute)) {
+                expiredMuteNotifications.put(targetUuid, mute);
+            }
+            return Optional.empty();
+        }
+        return Optional.of(mute);
+    }
+
+    public Optional<MuteRecord> consumeExpiredMuteNotification(UUID targetUuid) {
+        return Optional.ofNullable(expiredMuteNotifications.remove(targetUuid));
+    }
+
+    public boolean unmute(UUID targetUuid, Moderator moderator) throws SQLException {
+        boolean revoked = database.revokeMute(targetUuid, clock.millis(), moderator);
+        if (revoked) {
+            activeMutes.remove(targetUuid);
+            expiredMuteNotifications.remove(targetUuid);
+        }
+        return revoked;
+    }
+
+    public StaffNoteRecord addStaffNote(
+            UUID targetUuid,
+            String targetName,
+            String text,
+            Moderator moderator) throws SQLException {
+        return database.insertStaffNote(
+                targetUuid, targetName, text, clock.millis(), moderator);
+    }
+
     public AuditPage history(UUID targetUuid, AuditFilter filter, int limit, int offset)
             throws SQLException {
         return database.loadHistory(targetUuid, filter, limit, offset);
@@ -197,6 +269,8 @@ public final class ModerationService implements AutoCloseable {
     public void close() throws SQLException {
         activeBans.clear();
         activeIpBans.clear();
+        activeMutes.clear();
+        expiredMuteNotifications.clear();
         database.close();
     }
 }

@@ -12,10 +12,13 @@ class AuditFilterTest {
         assertEquals(AuditFilter.ALL, AuditFilter.parse("all"));
         assertEquals(AuditFilter.BANS, AuditFilter.parse("BANS"));
         assertEquals(AuditFilter.KICKS, AuditFilter.parse("kicks"));
+        assertEquals(AuditFilter.WARNINGS, AuditFilter.parse("WARNINGS"));
+        assertEquals(AuditFilter.MUTES, AuditFilter.parse("mutes"));
+        assertEquals(AuditFilter.NOTES, AuditFilter.parse("notes"));
     }
 
     @Test
     void rejectsUnknownFilters() {
-        assertThrows(IllegalArgumentException.class, () -> AuditFilter.parse("mutes"));
+        assertThrows(IllegalArgumentException.class, () -> AuditFilter.parse("unknown"));
     }
 }

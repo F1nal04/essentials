@@ -21,11 +21,15 @@ public record AuditRecord(
     public enum Action {
         BAN,
         IP_BAN,
-        KICK
+        KICK,
+        WARNING,
+        MUTE,
+        NOTE
     }
 
     public long durationMs() {
-        if (action == Action.KICK || expiresAtMs == null) {
+        if (action == Action.KICK || action == Action.WARNING || action == Action.NOTE
+                || expiresAtMs == null) {
             return 0;
         }
         return expiresAtMs - occurredAtMs;

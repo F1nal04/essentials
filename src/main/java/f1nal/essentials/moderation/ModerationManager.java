@@ -41,6 +41,11 @@ public final class ModerationManager {
         return current == null ? Optional.empty() : current.activeIpBan(address);
     }
 
+    public static Optional<MuteRecord> activeMute(UUID targetUuid) {
+        ModerationService current = service;
+        return current == null ? Optional.empty() : current.activeMute(targetUuid);
+    }
+
     public static synchronized void close() throws SQLException {
         ModerationService current = service;
         service = null;

@@ -83,6 +83,10 @@ public final class CommandConfig {
         defaults.put("pardonip", new CommandSettings(true, "op"));
         defaults.put("kick", new CommandSettings(true, "op"));
         defaults.put("history", new CommandSettings(true, "op"));
+        defaults.put("warn", new CommandSettings(true, "op"));
+        defaults.put("mute", new CommandSettings(true, "op"));
+        defaults.put("unmute", new CommandSettings(true, "op"));
+        defaults.put("note", new CommandSettings(true, "op"));
         return defaults;
     }
 

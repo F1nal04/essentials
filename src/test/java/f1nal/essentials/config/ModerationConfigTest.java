@@ -42,4 +42,18 @@ class ModerationConfigTest {
         assertTrue(config.banMessage.contains("{time}"));
         assertTrue(config.kickMessage.contains("{reason}"));
     }
+
+    @Test
+    void parsesMuteScopeAndWarningEscalationSettings() {
+        ModerationConfig config = ModerationConfig.parse("""
+                moderation:
+                  mute_blocks_private_messages: false
+                  warning_rolling_period: "7d"
+                  warning_alert_threshold: 5
+                """);
+
+        assertEquals(false, config.muteBlocksPrivateMessages);
+        assertEquals(7L * 86_400_000L, config.warningRollingPeriodMs);
+        assertEquals(5, config.warningAlertThreshold);
+    }
 }

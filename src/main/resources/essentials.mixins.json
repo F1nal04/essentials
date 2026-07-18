@@ -5,9 +5,11 @@
     "BanPlayerCommandsMixin",
     "BanIpCommandsMixin",
     "KickCommandMixin",
+    "MsgCommandMixin",
     "PardonCommandMixin",
     "PardonIpCommandMixin",
-    "ServerCommonPacketListenerAccessor"
+    "ServerCommonPacketListenerAccessor",
+    "TeamMsgCommandMixin"
   ],
   "injectors": {
     "defaultRequire": 1

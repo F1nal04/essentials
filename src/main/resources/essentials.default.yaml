@@ -29,6 +29,17 @@ moderation:
   ban_message: "&cYou are banned from this server.\n&7Reason: &f{reason}\n&7Time remaining: &f{time}"
   # Placeholders: {player}, {reason}, {moderator}
   kick_message: "&cYou were kicked from this server.\n&7Reason: &f{reason}"
+  # Placeholders: {player}, {reason}, {moderator}
+  warning_message: "&eYou were warned by {moderator}: &f{reason}"
+  # Placeholders: {player}, {reason}, {moderator}, {time}
+  mute_message: "&cYou were muted by {moderator}. &7Reason: &f{reason} &7Duration: &f{time}"
+  unmute_message: "&aYour mute was revoked by {moderator}."
+  mute_blocked_message: "&cYou are muted. &7Reason: &f{reason} &7Time remaining: &f{time}"
+  mute_expired_message: "&aYour mute has expired."
+  mute_blocks_private_messages: true
+  # Duration syntax: 30m, 2h, 7d, 4w, or combinations such as 1d12h.
+  warning_rolling_period: "30d"
+  warning_alert_threshold: 3
 
 updates:
   # Check Modrinth once, asynchronously, after each server start.
@@ -97,5 +108,17 @@ commands:
     enabled: true
     access: "op"
   history:
+    enabled: true
+    access: "op"
+  warn:
+    enabled: true
+    access: "op"
+  mute:
+    enabled: true
+    access: "op"
+  unmute:
+    enabled: true
+    access: "op"
+  note:
     enabled: true
     access: "op"

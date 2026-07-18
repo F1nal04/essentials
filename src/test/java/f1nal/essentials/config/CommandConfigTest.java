@@ -15,7 +15,7 @@ class CommandConfigTest {
     private static final java.util.Set<String> KNOWN = java.util.Set.of(
             "repair", "heal", "feed", "flight", "disposal", "tpa", "back", "backpack", "backpacksee",
             "enderchestsee", "inventorysee", "ban", "pardon", "banip", "pardonip", "kick",
-            "history");
+            "history", "warn", "mute", "unmute", "note");
 
     @Test
     void missingSectionGivesAllDefaults() {
