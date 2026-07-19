@@ -16,6 +16,7 @@ import f1nal.essentials.config.CommandConfig.CommandSettings;
 import f1nal.essentials.config.MessagingConfig;
 import f1nal.essentials.messaging.MessageFormatter;
 import f1nal.essentials.messaging.MessagingManager;
+import f1nal.essentials.messaging.MessagingState;
 import f1nal.essentials.messaging.VanishVisibility;
 import f1nal.essentials.moderation.MuteEnforcement;
 import f1nal.essentials.permission.EssentialsPermissions;
@@ -100,9 +101,13 @@ public final class MessageCommands {
                     MessagingConfig.get().missingReplyTargetFormat, sender.getName().getString(), "", ""));
             return 0;
         }
+        String message = StringArgumentType.getString(context, "message");
+        if (MessagingState.CONSOLE_ID.equals(targetId)) {
+            return deliverToConsole(source, sender, message);
+        }
         ServerPlayer target = source.getServer().getPlayerList().getPlayer(targetId);
         if (target == null || !canSee(source, target)) return unavailable(source);
-        return deliver(source, target, StringArgumentType.getString(context, "message"), true);
+        return deliver(source, target, message, true);
     }
 
     private static int deliver(CommandSourceStack source, ServerPlayer recipient,
@@ -134,8 +139,24 @@ public final class MessageCommands {
             // no online staff member has enabled /msgspy.
             source.getServer().sendSystemMessage(MessageFormatter.format(
                     config.spyFormat, senderName, recipientName, message));
+        } else {
+            MessagingManager.state().recordConsoleMessage(recipient.getUUID());
         }
         sendSpyMessage(source.getServer(), sender, recipient, senderName, recipientName, message);
+        return 1;
+    }
+
+    private static int deliverToConsole(CommandSourceStack source, ServerPlayer sender,
+            String message) {
+        String senderName = sender.getName().getString();
+        MessagingConfig config = MessagingConfig.get();
+        source.getServer().sendSystemMessage(MessageFormatter.format(
+                config.incomingFormat, senderName, "Console", message));
+        source.sendSuccess(() -> MessageFormatter.format(
+                config.replyFormat, senderName, "Console", message), false);
+        MessagingManager.state().recordConsoleMessage(sender.getUUID());
+        sendSpyMessage(source.getServer(), sender, null,
+                senderName, "Console", message);
         return 1;
     }
 

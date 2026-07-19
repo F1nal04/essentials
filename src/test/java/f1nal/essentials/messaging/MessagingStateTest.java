@@ -28,4 +28,13 @@ class MessagingStateTest {
         assertFalse(state.toggleSpy(player));
         assertFalse(state.isSpying(player));
     }
+
+    @Test
+    void consoleMessagesCanBeRepliedTo() {
+        UUID recipient = UUID.randomUUID();
+        MessagingState state = new MessagingState();
+        state.recordConsoleMessage(recipient);
+        assertEquals(MessagingState.CONSOLE_ID,
+                state.replyTarget(recipient).orElseThrow());
+    }
 }
