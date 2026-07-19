@@ -35,6 +35,11 @@ The primary command is the configured command name. Aliases are shorter alternat
 | `/unmute <player>` | None | Revokes a player's active mute. | Operators |
 | `/note <player> <text>` | None | Adds a private, staff-only note without notifying the player. | Operators |
 | `/history <player> [all\|bans\|kicks\|warnings\|mutes\|notes] [page]` | `/audit` | Shows filtered, paginated moderation history and active moderation state. | Operators |
+| `/msg <player> <message>` | `/tell`, `/w` | Sends a private message to an online, visible player. The console may use this command. | Everyone |
+| `/r <message>` | None | Replies to your most recent private-message participant. | Everyone |
+| `/ignore <player>` | None | Toggles persistent private-message blocking for a player. | Everyone |
+| `/msgspy` | None | Toggles staff visibility of private-message traffic. | Operators |
+| `/msgall <message>` | None | Sends a formatted announcement to every online player. The console may use this command. | Operators |
 
 `[target]` is optional. Defaults to executor.
 
@@ -57,6 +62,7 @@ The backpack has three modes, set via `backpack.mode` in the config:
 - **Back Command**: Return to your previous position after TPA teleports with a configurable time window
 - **Admin Inventory Views**: `/inventorysee` and `/enderchestsee` give operators editable views into online and offline players' inventories and ender chests
 - **Persistent Moderation**: Bans, kicks, warnings, temporary/permanent mutes, revocations, and private staff notes are stored in SQLite, survive restarts, and can be reviewed with `/history` or `/audit`
+- **Private Messaging**: UUID-based replies and persistent ignores, configurable message formats, staff message spy, and server-wide announcements
 - **Update Notifications**: After startup, one asynchronous Modrinth check can notify the console and authorized online operators about newer compatible releases
 
 ## Installation (Fabric)
@@ -75,7 +81,7 @@ The backpack has three modes, set via `backpack.mode` in the config:
 
 ## Configuration
 
-Essentials uses `config/essentials/essentials.yaml` and stores moderation data in `config/essentials/essentials.db`. Existing `config/essentials.yaml` files are moved into the new folder automatically. If no configuration file exists, defaults are generated. After a mod update, new options are merged into your existing file automatically (see Automatic Config Migration above).
+Essentials uses `config/essentials/essentials.yaml`, stores moderation data in `config/essentials/essentials.db`, and stores UUID-based ignore relationships in `config/essentials/ignored-players.properties`. Existing `config/essentials.yaml` files are moved into the new folder automatically. If no configuration file exists, defaults are generated. After a mod update, new options are merged into your existing file automatically (see Automatic Config Migration above).
 
 ### Chat Tag
 
@@ -115,6 +121,15 @@ The TPA system includes the following configurable options:
 ### Command Access
 
 Every command can be enabled/disabled and have its access level configured (`op`/`all`) in the `commands` section.
+
+### Private Messaging Configuration
+
+The `messaging` section configures incoming, outgoing, reply, spy, message-all, ignored-player,
+unavailable-target, and missing-reply text. Formats accept `{sender}`, `{recipient}`, `{message}`,
+and Minecraft `&` formatting codes. `staff_bypasses_ignore` controls whether users with
+`essentials.msg.ignore.bypass` (OP fallback) bypass ignores; `console_bypasses_ignore` controls the
+same behavior for console messages. The `msg`, `reply`, `ignore`, `msgspy`, and `msgall` command
+entries can each be enabled and restricted independently.
 
 ### Update Checks
 
@@ -160,6 +175,11 @@ Aliases always use their primary command's node. Console execution is unchanged.
 | `/unmute` | `essentials.unmute` |
 | `/note` | `essentials.note` |
 | `/history` (`/audit`) | `essentials.history` |
+| `/msg` (`/tell`, `/w`) | `essentials.msg` |
+| `/r` | `essentials.reply` |
+| `/ignore` | `essentials.ignore` |
+| `/msgspy` | `essentials.msgspy` |
+| `/msgall` | `essentials.msgall` |
 | Update availability notifications | `essentials.update.notify` |
 
 Granular capabilities use these sub-permissions:
@@ -174,6 +194,8 @@ Granular capabilities use these sub-permissions:
 | View warning history and rolling counts | `essentials.history.warnings` |
 | View mute and revocation history | `essentials.history.mutes` |
 | View private staff notes | `essentials.history.notes` |
+| Bypass player ignores when enabled | `essentials.msg.ignore.bypass` |
+| Resolve vanished message targets | `essentials.vanish.see` |
 
 Without a permission provider, each sub-permission uses its owning command's existing `access` result; it does
 not add a new access tier or require any permission configuration.

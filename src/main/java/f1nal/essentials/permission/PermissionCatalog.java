@@ -17,6 +17,8 @@ public final class PermissionCatalog {
             case "ban-ip", "banip" -> "banip";
             case "pardon-ip", "unban-ip" -> "pardonip";
             case "audit" -> "history";
+            case "tell", "w" -> "msg";
+            case "r" -> "reply";
             default -> commandOrPath;
         };
     }

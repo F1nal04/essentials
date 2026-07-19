@@ -41,6 +41,23 @@ moderation:
   warning_rolling_period: "30d"
   warning_alert_threshold: 3
 
+messaging:
+  # Placeholders: {sender}, {recipient}, {message}. Use & formatting codes.
+  # Private messages use white for "You", light purple for the other player,
+  # dark purple for the arrow, and gray for the message body.
+  incoming_format: "&8[&d{sender} &5-> &fYou&8] &7{message}"
+  outgoing_format: "&8[&fYou &5-> &d{recipient}&8] &7{message}"
+  reply_format: "&8[&fYou &5-> &d{recipient}&8] &7{message}"
+  # Spy output intentionally uses only gray shades so it stays unobtrusive.
+  spy_format: "&8[&7Spy&8] &7{sender} &8-> &7{recipient}&8: &7{message}"
+  message_all_format: "&8[&5Announcement&8] &d{message}"
+  ignored_player_format: "&c{recipient} is not accepting your private messages."
+  unavailable_target_format: "&cThat player is offline or unavailable."
+  missing_reply_target_format: "&cYou do not have anyone to reply to."
+  # The staff bypass also requires essentials.msg.ignore.bypass (OP fallback).
+  staff_bypasses_ignore: true
+  console_bypasses_ignore: true
+
 updates:
   # Check Modrinth once, asynchronously, after each server start.
   enabled: true
@@ -120,5 +137,20 @@ commands:
     enabled: true
     access: "op"
   note:
+    enabled: true
+    access: "op"
+  msg:
+    enabled: true
+    access: "all"
+  reply:
+    enabled: true
+    access: "all"
+  ignore:
+    enabled: true
+    access: "all"
+  msgspy:
+    enabled: true
+    access: "op"
+  msgall:
     enabled: true
     access: "op"

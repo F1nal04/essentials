@@ -25,6 +25,7 @@ import f1nal.essentials.command.RepairCommand;
 import f1nal.essentials.command.TpaCommands;
 import f1nal.essentials.command.WarnCommand;
 import f1nal.essentials.command.MuteCommand;
+import f1nal.essentials.command.MessageCommands;
 import f1nal.essentials.command.UnmuteCommand;
 import f1nal.essentials.command.NoteCommand;
 import f1nal.essentials.config.CommandConfig;
@@ -32,6 +33,7 @@ import f1nal.essentials.config.CommandConfig.CommandSettings;
 import f1nal.essentials.config.ConfigMigrator;
 import f1nal.essentials.moderation.ModerationManager;
 import f1nal.essentials.moderation.MuteEnforcement;
+import f1nal.essentials.messaging.MessagingManager;
 import f1nal.essentials.mixin.ServerCommonPacketListenerAccessor;
 import f1nal.essentials.moderation.IpAddressUtil;
 import f1nal.essentials.permission.EssentialsPermissions;
@@ -201,6 +203,15 @@ public class Essentials implements ModInitializer {
             CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment)
                     -> NoteCommand.register(dispatcher, registryAccess, environment, noteSettings));
         }
+
+        CommandSettings msgSettings = commandSettings.get("msg");
+        CommandSettings replySettings = commandSettings.get("reply");
+        CommandSettings ignoreSettings = commandSettings.get("ignore");
+        CommandSettings msgSpySettings = commandSettings.get("msgspy");
+        CommandSettings msgAllSettings = commandSettings.get("msgall");
+        CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment)
+                -> MessageCommands.register(dispatcher, msgSettings, replySettings,
+                        ignoreSettings, msgSpySettings, msgAllSettings));
     }
 
     private void registerLifecycleEvents() {
@@ -213,6 +224,7 @@ public class Essentials implements ModInitializer {
                 throw new IllegalStateException("Essentials moderation database could not be initialized", e);
             }
             BackpackManager.initialize(server);
+            MessagingManager.initialize();
             UpdateManager.start(server);
         });
 
@@ -222,6 +234,7 @@ public class Essentials implements ModInitializer {
             BackpackSeeCommand.finishAll();
             BackpackManager.saveAll(server);
             f1nal.essentials.command.OfflinePlayerDataManager.finishAll();
+            MessagingManager.close();
             try {
                 ModerationManager.close();
             } catch (java.sql.SQLException e) {

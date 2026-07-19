@@ -20,7 +20,10 @@ class PermissionCatalogTest {
                 Map.entry("unban", "pardon"),
                 Map.entry("ban-ip", "banip"),
                 Map.entry("unban-ip", "pardonip"),
-                Map.entry("audit", "history"))
+                Map.entry("audit", "history"),
+                Map.entry("tell", "msg"),
+                Map.entry("w", "msg"),
+                Map.entry("r", "reply"))
                 .forEach((alias, primary) -> assertEquals(primary, PermissionCatalog.path(alias)));
     }
 

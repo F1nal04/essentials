@@ -22,6 +22,10 @@ public final class ConfigPaths {
         return directory().resolve("essentials.db");
     }
 
+    public static Path ignoredPlayersFile() {
+        return directory().resolve("ignored-players.properties");
+    }
+
     static Path legacyConfigFile(Path configDir) {
         return configDir.resolve("essentials.yaml");
     }

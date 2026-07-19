@@ -87,6 +87,11 @@ public final class CommandConfig {
         defaults.put("mute", new CommandSettings(true, "op"));
         defaults.put("unmute", new CommandSettings(true, "op"));
         defaults.put("note", new CommandSettings(true, "op"));
+        defaults.put("msg", new CommandSettings(true, "all"));
+        defaults.put("reply", new CommandSettings(true, "all"));
+        defaults.put("ignore", new CommandSettings(true, "all"));
+        defaults.put("msgspy", new CommandSettings(true, "op"));
+        defaults.put("msgall", new CommandSettings(true, "op"));
         return defaults;
     }
 
