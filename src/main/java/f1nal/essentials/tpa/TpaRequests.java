@@ -166,6 +166,19 @@ public final class TpaRequests {
         return true;
     }
 
+    /** Removes every request involving a player without applying cancel cooldown. */
+    public synchronized void removeAllFor(UUID playerId) {
+        List<Request> matches = new ArrayList<>();
+        for (List<Request> requests : outgoingBySender.values()) {
+            for (Request request : requests) {
+                if (request.sender.equals(playerId) || request.target.equals(playerId)) {
+                    matches.add(request);
+                }
+            }
+        }
+        matches.forEach(this::remove);
+    }
+
     private void remove(Request req) {
         List<Request> outgoing = outgoingBySender.get(req.sender);
         if (outgoing != null) {

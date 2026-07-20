@@ -13,6 +13,7 @@ import f1nal.essentials.config.CommandConfig;
 import f1nal.essentials.tpa.TpaManager;
 import f1nal.essentials.tpa.TpaRequests;
 import f1nal.essentials.back.BackManager;
+import f1nal.essentials.vanish.VanishManager;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
@@ -142,6 +143,7 @@ public final class TpaCommands {
         }
         List<ServerPlayer> others = server.getPlayerList().getPlayers().stream()
                 .filter(p -> p != sender)
+                .filter(p -> VanishManager.canSee(source, p))
                 .toList();
         if (others.isEmpty()) {
             source.sendFailure(Messages.error("No other players are online."));

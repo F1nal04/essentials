@@ -51,4 +51,8 @@ public final class TpaManager {
     public static boolean cancel(ServerPlayer sender) {
         return REQUESTS.cancel(sender.getUUID());
     }
+
+    public static void removeAllFor(UUID playerId) {
+        REQUESTS.removeAllFor(playerId);
+    }
 }

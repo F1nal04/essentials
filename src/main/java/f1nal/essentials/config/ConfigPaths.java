@@ -26,6 +26,10 @@ public final class ConfigPaths {
         return directory().resolve("ignored-players.properties");
     }
 
+    public static Path vanishedPlayersFile() {
+        return directory().resolve("vanished-players.properties");
+    }
+
     static Path legacyConfigFile(Path configDir) {
         return configDir.resolve("essentials.yaml");
     }

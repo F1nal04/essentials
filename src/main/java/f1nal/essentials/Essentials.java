@@ -24,6 +24,7 @@ import f1nal.essentials.command.PardonIpCommand;
 import f1nal.essentials.command.RepairCommand;
 import f1nal.essentials.command.TpaCommands;
 import f1nal.essentials.command.WarnCommand;
+import f1nal.essentials.command.VanishCommand;
 import f1nal.essentials.command.MuteCommand;
 import f1nal.essentials.command.MessageCommands;
 import f1nal.essentials.command.UnmuteCommand;
@@ -38,6 +39,8 @@ import f1nal.essentials.mixin.ServerCommonPacketListenerAccessor;
 import f1nal.essentials.moderation.IpAddressUtil;
 import f1nal.essentials.permission.EssentialsPermissions;
 import f1nal.essentials.update.UpdateManager;
+import f1nal.essentials.vanish.VanishChatEnforcement;
+import f1nal.essentials.vanish.VanishManager;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
@@ -57,6 +60,7 @@ public class Essentials implements ModInitializer {
         registerCommands();
         registerLifecycleEvents();
         MuteEnforcement.register();
+        VanishChatEnforcement.register();
         LOGGER.info("Essentials initialized");
     }
 
@@ -212,6 +216,13 @@ public class Essentials implements ModInitializer {
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment)
                 -> MessageCommands.register(dispatcher, msgSettings, replySettings,
                         ignoreSettings, msgSpySettings, msgAllSettings));
+
+        CommandSettings vanishSettings = commandSettings.get("vanish");
+        VanishManager.configurePermissions(vanishSettings);
+        if (vanishSettings != null && vanishSettings.enabled()) {
+            CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment)
+                    -> VanishCommand.register(dispatcher, registryAccess, environment, vanishSettings));
+        }
     }
 
     private void registerLifecycleEvents() {
@@ -225,6 +236,7 @@ public class Essentials implements ModInitializer {
             }
             BackpackManager.initialize(server);
             MessagingManager.initialize();
+            VanishManager.initialize(server);
             UpdateManager.start(server);
         });
 
@@ -235,6 +247,7 @@ public class Essentials implements ModInitializer {
             BackpackManager.saveAll(server);
             f1nal.essentials.command.OfflinePlayerDataManager.finishAll();
             MessagingManager.close();
+            VanishManager.close();
             try {
                 ModerationManager.close();
             } catch (java.sql.SQLException e) {
@@ -270,6 +283,7 @@ public class Essentials implements ModInitializer {
         // its menu-close save.
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
             java.util.UUID playerId = handler.getPlayer().getUUID();
+            VanishManager.onDisconnect(handler.getPlayer());
             BackpackSeeCommand.finishForViewer(playerId);
             if (BackpackSeeCommand.isTargetBeingViewed(playerId)) {
                 BackpackManager.saveBackpack(playerId,
@@ -280,7 +294,9 @@ public class Essentials implements ModInitializer {
             f1nal.essentials.command.OfflinePlayerDataManager.finishForViewer(playerId);
         });
 
-        ServerPlayConnectionEvents.JOIN.register((handler, sender, server) ->
-                UpdateManager.onPlayerJoin(handler.getPlayer()));
+        ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
+            VanishManager.onJoin(handler.getPlayer());
+            UpdateManager.onPlayerJoin(handler.getPlayer());
+        });
     }
 }

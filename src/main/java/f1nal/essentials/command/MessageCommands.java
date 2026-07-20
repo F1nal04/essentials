@@ -17,9 +17,9 @@ import f1nal.essentials.config.MessagingConfig;
 import f1nal.essentials.messaging.MessageFormatter;
 import f1nal.essentials.messaging.MessagingManager;
 import f1nal.essentials.messaging.MessagingState;
-import f1nal.essentials.messaging.VanishVisibility;
 import f1nal.essentials.moderation.MuteEnforcement;
 import f1nal.essentials.permission.EssentialsPermissions;
+import f1nal.essentials.vanish.VanishManager;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.server.MinecraftServer;
@@ -238,9 +238,7 @@ public final class MessageCommands {
     }
 
     private static boolean canSee(CommandSourceStack source, ServerPlayer target) {
-        return !VanishVisibility.isVanished(target.getUUID())
-                || EssentialsPermissions.require("vanish.see",
-                        Commands.hasPermission(Commands.LEVEL_GAMEMASTERS)).test(source);
+        return VanishManager.canSee(source, target);
     }
 
     private static boolean bypassesIgnore(CommandSourceStack source) {

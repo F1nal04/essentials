@@ -40,6 +40,7 @@ The primary command is the configured command name. Aliases are shorter alternat
 | `/ignore <player>` | None | Toggles persistent private-message blocking for a player. | Everyone |
 | `/msgspy` | None | Toggles staff visibility of private-message traffic. | Operators |
 | `/msgall <message>` | None | Sends a formatted announcement to every online player. The console may use this command. | Operators |
+| `/vanish [on\|off]` | None | Toggles your vanish state. Staff with the others permission may use `/vanish <player> [on\|off]`. | Operators |
 
 `[target]` is optional. Defaults to executor.
 
@@ -64,6 +65,7 @@ The backpack has three modes, set via `backpack.mode` in the config:
 - **Persistent Moderation**: Bans, kicks, warnings, temporary/permanent mutes, revocations, and private staff notes are stored in SQLite, survive restarts, and can be reviewed with `/history` or `/audit`
 - **Private Messaging**: UUID-based replies and persistent ignores, configurable message formats, staff message spy, and server-wide announcements
 - **Update Notifications**: After startup, one asynchronous Modrinth check can notify the console and authorized online operators about newer compatible releases
+- **Staff Vanish**: UUID-backed vanish hides staff from player entities, the tab list, `/list`, selectors, suggestions, private messages, teleport requests, announcements, mob targeting, and unauthorized collision
 
 ## Installation (Fabric)
 
@@ -81,7 +83,7 @@ The backpack has three modes, set via `backpack.mode` in the config:
 
 ## Configuration
 
-Essentials uses `config/essentials/essentials.yaml`, stores moderation data in `config/essentials/essentials.db`, and stores UUID-based ignore relationships in `config/essentials/ignored-players.properties`. Existing `config/essentials.yaml` files are moved into the new folder automatically. If no configuration file exists, defaults are generated. After a mod update, new options are merged into your existing file automatically (see Automatic Config Migration above).
+Essentials uses `config/essentials/essentials.yaml`, stores moderation data in `config/essentials/essentials.db`, stores UUID-based ignore relationships in `config/essentials/ignored-players.properties`, and stores persistent vanish state in `config/essentials/vanished-players.properties`. Existing `config/essentials.yaml` files are moved into the new folder automatically. If no configuration file exists, defaults are generated. After a mod update, new options are merged into your existing file automatically (see Automatic Config Migration above).
 
 ### Chat Tag
 
@@ -143,6 +145,14 @@ Players require `essentials.update.notify`; when no permission provider supplies
 grants the notification to operators. Each eligible player is notified at most once per server session, including
 when they join after the check finishes. The checker never downloads or installs files.
 
+### Vanish Configuration
+
+The `vanish` section controls persistence, tab-list concealment, mob targeting, player collision,
+announcement suppression, and feedback text. `chat_behavior` is `block` by default; `staff_only`
+routes a vanished player's public chat attempt only to viewers with `essentials.vanish.see`. State is
+stored by UUID when `persist_state` is enabled. The `commands.vanish` entry enables the command and
+provides the OP fallback used by its permissions.
+
 When a supported Fabric permission provider such as LuckPerms is installed, Essentials automatically uses the
 nodes below. A provider grant or denial takes precedence over `access`. If no provider supplies a result, the
 existing `access: op|all` check remains the fallback, so current servers keep the same behavior and configuration.
@@ -180,6 +190,7 @@ Aliases always use their primary command's node. Console execution is unchanged.
 | `/ignore` | `essentials.ignore` |
 | `/msgspy` | `essentials.msgspy` |
 | `/msgall` | `essentials.msgall` |
+| `/vanish` | `essentials.vanish` |
 | Update availability notifications | `essentials.update.notify` |
 
 Granular capabilities use these sub-permissions:
@@ -195,7 +206,8 @@ Granular capabilities use these sub-permissions:
 | View mute and revocation history | `essentials.history.mutes` |
 | View private staff notes | `essentials.history.notes` |
 | Bypass player ignores when enabled | `essentials.msg.ignore.bypass` |
-| Resolve vanished message targets | `essentials.vanish.see` |
+| Change another player's vanish state | `essentials.vanish.others` |
+| See vanished players and resolve them in commands | `essentials.vanish.see` |
 
 Without a permission provider, each sub-permission uses its owning command's existing `access` result; it does
 not add a new access tier or require any permission configuration.
