@@ -19,6 +19,7 @@ A lightweight, server-side Fabric toolkit for survival servers and SMPs. Essenti
 - Inspect and edit inventories, ender chests, and per-player backpacks
 - Manage previously joined players even while they are offline
 - Changes stay synchronized when multiple admins inspect the same live storage
+- Hide staff with `/vanish`, including entities, the tab list, commands, announcements, mobs, and collision
 
 ### Moderation
 
@@ -39,7 +40,7 @@ Ban durations support values such as `30m`, `2h`, `7d`, and `1d12h`. Use `perman
 | Player storage | `/backpack` (`/bp`), `/disposal` (`/trash`, `/trashcan`) | Everyone |
 | Player utilities | `/repair [target]`, `/heal [target]`, `/feed [target]`, `/flight [target]` | Operators |
 | Inventory inspection | `/inventorysee` (`/isee`), `/enderchestsee` (`/esee`), `/backpacksee` (`/bpsee`) | Operators |
-| Player moderation | `/ban`, `/pardon` (`/unban`), `/kick`, `/history` (`/audit`) | Operators |
+| Player moderation | `/ban`, `/pardon` (`/unban`), `/kick`, `/history` (`/audit`), `/vanish` | Operators |
 | IP moderation | `/ban-ip` (`/banip`), `/pardon-ip` (`/unban-ip`) | Operators |
 
 Every command group can be disabled or made available to either operators or all players. With a compatible
@@ -61,6 +62,8 @@ The configuration is generated at `config/essentials/essentials.yaml`. Changes t
 | `backpack.mode` | `per_player` | Backpack type: `per_player`, `serverwide`, or `ender_chest` |
 | `tpa.timeout_seconds` | `60` | Time before a teleport request expires |
 | `tpa.cooldown_seconds` | `10` | Cooldown after cancelling a teleport request |
+| `vanish.persist_state` | `true` | Keeps UUID-based vanish state across reconnects and restarts |
+| `vanish.chat_behavior` | `block` | Blocks public chat or routes it to staff-only visibility |
 | `moderation.ban_message` | Included in generated config | Disconnect message used for player and IP bans |
 | `moderation.kick_message` | Included in generated config | Disconnect message used for kicks |
 | `updates.enabled` | `true` | Runs one asynchronous compatible-release check after startup |

@@ -3,12 +3,22 @@
   "package": "f1nal.essentials.mixin",
   "mixins": [
     "BanPlayerCommandsMixin",
+    "ChunkMapTrackedEntityMixin",
+    "CommandSourceStackMixin",
+    "EntityMixin",
+    "EntitySelectorMixin",
     "BanIpCommandsMixin",
     "KickCommandMixin",
     "MsgCommandMixin",
+    "MobMixin",
     "PardonCommandMixin",
     "PardonIpCommandMixin",
+    "PlayerAdvancementsMixin",
+    "PlayerListMixin",
+    "ListPlayersCommandMixin",
     "ServerCommonPacketListenerAccessor",
+    "ServerGamePacketListenerMixin",
+    "ServerPlayerMixin",
     "TeamMsgCommandMixin"
   ],
   "injectors": {

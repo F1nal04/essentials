@@ -109,4 +109,17 @@ class TpaRequestsTest {
         assertTrue(requests.findIncomingFor(target, null).isPresent());
         assertTrue(requests.findIncomingFor(other, null).isPresent());
     }
+
+    @Test
+    void removeAllForClearsIncomingAndOutgoingRequests() {
+        requests.createRequest(sender, target, TpaRequests.Type.TPA);
+        requests.createRequest(other, sender, TpaRequests.Type.TPA_HERE);
+
+        requests.removeAllFor(sender);
+
+        assertTrue(requests.findIncomingFor(target, sender).isEmpty());
+        assertTrue(requests.findIncomingFor(sender, other).isEmpty());
+        assertTrue(requests.createRequest(sender, target, TpaRequests.Type.TPA));
+        assertTrue(requests.createRequest(other, sender, TpaRequests.Type.TPA_HERE));
+    }
 }

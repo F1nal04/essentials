@@ -58,6 +58,23 @@ messaging:
   staff_bypasses_ignore: true
   console_bypasses_ignore: true
 
+vanish:
+  # Persist vanished UUIDs across reconnects and server restarts.
+  persist_state: true
+  hide_from_tab_list: true
+  prevent_mob_targeting: true
+  prevent_collision: true
+  suppress_announcements: true
+  # block | staff_only
+  chat_behavior: "block"
+  # Placeholders: {player}, {message}. Use & formatting codes.
+  enabled_message: "&aVanish enabled for {player}."
+  disabled_message: "&eVanish disabled for {player}."
+  join_message: "&7{player} joined while vanished."
+  leave_message: "&7{player} left while vanished."
+  chat_blocked_message: "&cYou cannot use public chat while vanished."
+  staff_chat_format: "&8[&7Vanish&8] &d{player}&8: &7{message}"
+
 updates:
   # Check Modrinth once, asynchronously, after each server start.
   enabled: true
@@ -152,5 +169,8 @@ commands:
     enabled: true
     access: "op"
   msgall:
+    enabled: true
+    access: "op"
+  vanish:
     enabled: true
     access: "op"

@@ -19,4 +19,17 @@ public final class VanishVisibility {
         if (vanished) VANISHED.add(playerId);
         else VANISHED.remove(playerId);
     }
+
+    public static void replace(Set<UUID> playerIds) {
+        VANISHED.clear();
+        VANISHED.addAll(playerIds);
+    }
+
+    public static Set<UUID> snapshot() {
+        return Set.copyOf(VANISHED);
+    }
+
+    public static void clear() {
+        VANISHED.clear();
+    }
 }
