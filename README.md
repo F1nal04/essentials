@@ -41,6 +41,8 @@ The primary command is the configured command name. Aliases are shorter alternat
 | `/msgspy` | None | Toggles staff visibility of private-message traffic. | Operators |
 | `/msgall <message>` | None | Sends a formatted announcement to every online player. The console may use this command. | Operators |
 | `/vanish [on\|off]` | None | Toggles your vanish state. Staff with the others permission may use `/vanish <player> [on\|off]`. | Operators |
+| `/ping [player]` | None | Shows your server-reported latency, or an authorized online player's latency. The console must specify a player. | Everyone |
+| `/tps` | None | Shows rolling TPS for the last 5 seconds, 10 seconds, 1 minute, 5 minutes, and 15 minutes. | Everyone |
 
 `[target]` is optional. Defaults to executor.
 
@@ -66,6 +68,8 @@ The backpack has three modes, set via `backpack.mode` in the config:
 - **Private Messaging**: UUID-based replies and persistent ignores, configurable message formats, staff message spy, and server-wide announcements
 - **Update Notifications**: After startup, one asynchronous Modrinth check can notify the console and authorized online operators about newer compatible releases
 - **Staff Vanish**: UUID-backed vanish hides staff from player entities, the tab list, `/list`, selectors, suggestions, private messages, teleport requests, announcements, mob targeting, and unauthorized collision
+- **Latency Reporting**: `/ping` reads the server's existing keep-alive latency and colors it using configurable thresholds
+- **TPS Monitoring**: Lightweight bounded tick sampling powers a compact, color-coded `/tps` report across five rolling windows
 
 ## Installation (Fabric)
 
@@ -123,6 +127,22 @@ The TPA system includes the following configurable options:
 ### Command Access
 
 Every command can be enabled/disabled and have its access level configured (`op`/`all`) in the `commands` section.
+
+### TPS Configuration
+
+The `tps` section configures the `healthy`, `degraded`, and `critical` display bands. Each band has a
+`minimum_tps` and a Minecraft formatting `color`. Defaults are green at 18.0 TPS or above, yellow at
+15.0 TPS or above, and red below 15.0 TPS. The minimums must be in descending order. Values below
+the critical minimum continue to use the critical color. The fixed two-line output and rolling windows
+are not configurable. `commands.tps` enables the command and defaults to `access: all`.
+
+### Ping Configuration
+
+The `ping` section sets the inclusive `good_max_ms` and `moderate_max_ms` boundaries; higher values
+are considered poor. The corresponding latency value is green, yellow, or red. `number_format` accepts
+`integer` or `decimal`. Feedback formats support `{player}`, `{latency}`, `{quality}`, `{color}`, and
+Minecraft `&` formatting codes. Separate formats cover self and targeted results, unavailable or hidden
+players, console use without a target, unavailable latency data, and insufficient targeted access.
 
 ### Private Messaging Configuration
 
@@ -191,6 +211,8 @@ Aliases always use their primary command's node. Console execution is unchanged.
 | `/msgspy` | `essentials.msgspy` |
 | `/msgall` | `essentials.msgall` |
 | `/vanish` | `essentials.vanish` |
+| `/ping` | `essentials.ping` |
+| `/tps` | `essentials.tps` |
 | Update availability notifications | `essentials.update.notify` |
 
 Granular capabilities use these sub-permissions:
@@ -208,6 +230,7 @@ Granular capabilities use these sub-permissions:
 | Bypass player ignores when enabled | `essentials.msg.ignore.bypass` |
 | Change another player's vanish state | `essentials.vanish.others` |
 | See vanished players and resolve them in commands | `essentials.vanish.see` |
+| Use `/ping <player>` | `essentials.ping.others` |
 
 Without a permission provider, each sub-permission uses its owning command's existing `access` result; it does
 not add a new access tier or require any permission configuration.

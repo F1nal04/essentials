@@ -16,7 +16,7 @@ class CommandConfigTest {
             "repair", "heal", "feed", "flight", "disposal", "tpa", "back", "backpack", "backpacksee",
             "enderchestsee", "inventorysee", "ban", "pardon", "banip", "pardonip", "kick",
             "history", "warn", "mute", "unmute", "note", "msg", "reply", "ignore",
-            "msgspy", "msgall");
+            "msgspy", "msgall", "vanish", "ping", "tps");
 
     @Test
     void missingSectionGivesAllDefaults() {
@@ -34,6 +34,8 @@ class CommandConfigTest {
         assertEquals(new CommandSettings(true, "all"), m.get("msg"));
         assertEquals(new CommandSettings(true, "all"), m.get("reply"));
         assertEquals(new CommandSettings(true, "op"), m.get("msgspy"));
+        assertEquals(new CommandSettings(true, "all"), m.get("ping"));
+        assertEquals(new CommandSettings(true, "all"), m.get("tps"));
     }
 
     @Test
@@ -42,6 +44,28 @@ class CommandConfigTest {
         assertFalse(m.get("repair").enabled());
         assertEquals("op", m.get("repair").access());
         assertEquals(new CommandSettings(true, "all"), m.get("tpa"));
+    }
+
+    @Test
+    void pingCanBeDisabled() {
+        Map<String, CommandSettings> settings = CommandConfig.parse("""
+                commands:
+                  ping:
+                    enabled: false
+                """);
+        assertFalse(settings.get("ping").enabled());
+        assertEquals("all", settings.get("ping").access());
+    }
+
+    @Test
+    void tpsCanBeDisabled() {
+        Map<String, CommandSettings> settings = CommandConfig.parse("""
+                commands:
+                  tps:
+                    enabled: false
+                """);
+        assertFalse(settings.get("tps").enabled());
+        assertEquals("all", settings.get("tps").access());
     }
 
     @Test

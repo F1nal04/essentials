@@ -93,6 +93,8 @@ public final class CommandConfig {
         defaults.put("msgspy", new CommandSettings(true, "op"));
         defaults.put("msgall", new CommandSettings(true, "op"));
         defaults.put("vanish", new CommandSettings(true, "op"));
+        defaults.put("ping", new CommandSettings(true, "all"));
+        defaults.put("tps", new CommandSettings(true, "all"));
         return defaults;
     }
 
