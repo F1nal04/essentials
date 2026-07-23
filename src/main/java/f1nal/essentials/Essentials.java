@@ -21,8 +21,10 @@ import f1nal.essentials.command.InventorySeeCommand;
 import f1nal.essentials.command.KickCommand;
 import f1nal.essentials.command.PardonCommand;
 import f1nal.essentials.command.PardonIpCommand;
+import f1nal.essentials.command.PingCommand;
 import f1nal.essentials.command.RepairCommand;
 import f1nal.essentials.command.TpaCommands;
+import f1nal.essentials.command.TpsCommand;
 import f1nal.essentials.command.WarnCommand;
 import f1nal.essentials.command.VanishCommand;
 import f1nal.essentials.command.MuteCommand;
@@ -39,11 +41,13 @@ import f1nal.essentials.mixin.ServerCommonPacketListenerAccessor;
 import f1nal.essentials.moderation.IpAddressUtil;
 import f1nal.essentials.permission.EssentialsPermissions;
 import f1nal.essentials.update.UpdateManager;
+import f1nal.essentials.tps.TpsManager;
 import f1nal.essentials.vanish.VanishChatEnforcement;
 import f1nal.essentials.vanish.VanishManager;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerConfigurationConnectionEvents;
 
@@ -223,6 +227,18 @@ public class Essentials implements ModInitializer {
             CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment)
                     -> VanishCommand.register(dispatcher, registryAccess, environment, vanishSettings));
         }
+
+        CommandSettings pingSettings = commandSettings.get("ping");
+        if (pingSettings != null && pingSettings.enabled()) {
+            CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment)
+                    -> PingCommand.register(dispatcher, registryAccess, environment, pingSettings));
+        }
+
+        CommandSettings tpsSettings = commandSettings.get("tps");
+        if (tpsSettings != null && tpsSettings.enabled()) {
+            CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment)
+                    -> TpsCommand.register(dispatcher, tpsSettings));
+        }
     }
 
     private void registerLifecycleEvents() {
@@ -237,12 +253,17 @@ public class Essentials implements ModInitializer {
             BackpackManager.initialize(server);
             MessagingManager.initialize();
             VanishManager.initialize(server);
+            TpsManager.start();
             UpdateManager.start(server);
         });
+
+        ServerTickEvents.END_SERVER_TICK.register(server
+                -> TpsManager.recordTick(System.nanoTime()));
 
         // Save all backpacks when server stops
         ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
             UpdateManager.stop();
+            TpsManager.stop();
             BackpackSeeCommand.finishAll();
             BackpackManager.saveAll(server);
             f1nal.essentials.command.OfflinePlayerDataManager.finishAll();

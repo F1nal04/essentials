@@ -32,5 +32,6 @@ class PermissionCatalogTest {
         assertEquals("repair", PermissionCatalog.path("repair"));
         assertEquals("repair.others", PermissionCatalog.path("repair.others"));
         assertEquals("tpahere.all", PermissionCatalog.path("tpahere.all"));
+        assertEquals("tps", PermissionCatalog.path("tps"));
     }
 }

@@ -75,6 +75,21 @@ vanish:
   chat_blocked_message: "&cYou cannot use public chat while vanished."
   staff_chat_format: "&8[&7Vanish&8] &d{player}&8: &7{message}"
 
+ping:
+  # Latency at or below good_max_ms is green; latency at or below
+  # moderate_max_ms is yellow; higher latency is red.
+  good_max_ms: 100
+  moderate_max_ms: 200
+  # integer | decimal
+  number_format: "integer"
+  # Placeholders: {player}, {latency}, {quality}, {color}. Use & formatting codes.
+  self_format: "&7Your ping is {color}{latency} ms&7."
+  other_format: "&d{player}&7's ping is {color}{latency} ms&7."
+  unavailable_player_format: "&cThat player is offline or unavailable."
+  console_requires_player_format: "&cThe server console must specify a player."
+  unavailable_latency_format: "&cLatency data is unavailable for {player}."
+  insufficient_access_format: "&cYou do not have permission to view another player's ping."
+
 updates:
   # Check Modrinth once, asynchronously, after each server start.
   enabled: true
@@ -90,6 +105,19 @@ updates:
   # Placeholders: {installed_version}, {latest_version}, {channel}, {download_link}
   notification_text: "Update available: {installed_version} -> {latest_version} ({channel}). {download_link}"
   clickable_link: true
+
+tps:
+  # Each band has a minimum TPS and a Minecraft formatting color.
+  # Values below critical.minimum_tps still use the critical color.
+  healthy:
+    minimum_tps: 18.0
+    color: "GREEN"
+  degraded:
+    minimum_tps: 15.0
+    color: "YELLOW"
+  critical:
+    minimum_tps: 0.0
+    color: "RED"
 
 commands:
   # Access: op | all
@@ -174,3 +202,9 @@ commands:
   vanish:
     enabled: true
     access: "op"
+  ping:
+    enabled: true
+    access: "all"
+  tps:
+    enabled: true
+    access: "all"
