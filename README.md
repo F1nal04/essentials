@@ -119,7 +119,9 @@ Minecraft's vanilla world spawn. `/spawn` validates that the dimension is loaded
 point and nearby blocks for solid footing, collision-free headroom, an empty fluid space, and a non-hazardous
 arrival position.
 
-- `first_join` and `respawn` (default: `false`) route first-time players and death respawns directly to Essentials spawn without requiring `essentials.spawn`.
+- `first_join` (default: `true`) routes first-time players when an Essentials spawn is configured.
+- `respawn` (default: `true`) routes death respawns only when Essentials spawn is configured and the player has no valid personal respawn point, such as a bed or respawn anchor.
+- Lifecycle routing does not require `essentials.spawn`.
 - `warmup_seconds` (default: `3`) and `cooldown_seconds` (default: `30`) control `/spawn`; each accepts `0` to disable its delay.
 - `cancel_on_movement` and `cancel_on_damage` (default: `true`) cancel pending warm-ups when triggered.
 - The `*_message` entries configure all spawn feedback with Minecraft `&` formatting codes. Warm-up and cooldown messages support `{seconds}`.

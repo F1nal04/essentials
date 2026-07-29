@@ -39,7 +39,7 @@ class SpawnConfigTest {
                   no_spawn_message: ""
                 """);
 
-        assertFalse(config.firstJoin);
+        assertTrue(config.firstJoin);
         assertEquals(3, config.warmupSeconds);
         assertEquals(30, config.cooldownSeconds);
         assertEquals("&cNo Essentials spawn has been configured.", config.noSpawnMessage);
@@ -47,7 +47,10 @@ class SpawnConfigTest {
 
     @Test
     void missingSectionAndMalformedYamlUseDefaults() {
-        assertEquals(3, SpawnConfig.parse("other: {}\n").warmupSeconds);
+        SpawnConfig missing = SpawnConfig.parse("other: {}\n");
+        assertTrue(missing.firstJoin);
+        assertTrue(missing.respawn);
+        assertEquals(3, missing.warmupSeconds);
         assertEquals(30, SpawnConfig.parse("{{{ not yaml").cooldownSeconds);
     }
 }

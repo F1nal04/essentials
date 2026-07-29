@@ -153,13 +153,16 @@ public final class SpawnManager {
         synchronized (SpawnManager.class) {
             firstJoin = KNOWN_PLAYERS.add(player.getUUID());
         }
-        if (firstJoin && SpawnConfig.get().firstJoin) {
+        if (SpawnRouting.shouldRouteFirstJoin(
+                SpawnConfig.get().firstJoin, firstJoin, spawn.isPresent())) {
             sendResult(player, teleportImmediately(player));
         }
     }
 
     public static void onRespawn(ServerPlayer player, boolean alive) {
-        if (!alive && SpawnConfig.get().respawn) {
+        if (SpawnRouting.shouldRouteRespawn(
+                SpawnConfig.get().respawn, alive, spawn.isPresent(),
+                player.getRespawnConfig() != null)) {
             sendResult(player, teleportImmediately(player));
         }
     }

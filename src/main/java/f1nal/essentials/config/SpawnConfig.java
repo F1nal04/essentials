@@ -137,7 +137,7 @@ public final class SpawnConfig {
     }
 
     private static SpawnConfig defaults() {
-        return new SpawnConfig(false, false, DEFAULT_WARMUP_SECONDS,
+        return new SpawnConfig(true, true, DEFAULT_WARMUP_SECONDS,
                 DEFAULT_COOLDOWN_SECONDS, true, true,
                 "&aEssentials spawn set.",
                 "&aTeleported to spawn.",

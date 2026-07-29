@@ -68,8 +68,8 @@ The configuration is generated at `config/essentials/essentials.yaml`. Changes t
 | `backpack.mode` | `per_player` | Backpack type: `per_player`, `serverwide`, or `ender_chest` |
 | `tpa.timeout_seconds` | `60` | Time before a teleport request expires |
 | `tpa.cooldown_seconds` | `10` | Cooldown after cancelling a teleport request |
-| `spawn.first_join` | `false` | Sends first-time players to the Essentials spawn |
-| `spawn.respawn` | `false` | Uses the Essentials spawn after death |
+| `spawn.first_join` | `true` | Sends first-time players to a configured Essentials spawn |
+| `spawn.respawn` | `true` | Uses Essentials spawn after death when no valid bed, anchor, or other personal point exists |
 | `spawn.warmup_seconds` | `3` | Delay before `/spawn` teleports |
 | `spawn.cooldown_seconds` | `30` | Delay before `/spawn` can be used again |
 | `spawn.cancel_on_movement` | `true` | Cancels a pending spawn teleport when the player moves |

@@ -25,8 +25,9 @@ tpa:
 
 spawn:
   # Route players to Essentials spawn on their first-ever join or after death.
-  first_join: false
-  respawn: false
+  first_join: true
+  # Used only when the player has no valid bed, respawn anchor, or other personal point.
+  respawn: true
   # /spawn timing. Players with the matching bypass permission skip either delay.
   warmup_seconds: 3
   cooldown_seconds: 30
