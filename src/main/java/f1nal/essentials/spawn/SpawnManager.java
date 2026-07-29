@@ -89,6 +89,18 @@ public final class SpawnManager {
 
     public static RequestResult requestTeleport(ServerPlayer player,
             boolean bypassWarmup, boolean bypassCooldown) {
+        SpawnTeleportState.Request pre = TELEPORTS.precheck(player.getUUID(), bypassCooldown);
+        switch (pre.result()) {
+            case ALREADY_PENDING -> {
+                return new RequestResult(Status.ALREADY_PENDING, 0);
+            }
+            case COOLDOWN -> {
+                return new RequestResult(Status.COOLDOWN, pre.seconds());
+            }
+            default -> {
+            }
+        }
+
         DestinationResult destination = resolveDestination(player);
         if (destination.status() != Status.TELEPORTED) {
             return new RequestResult(destination.status(), 0);
@@ -260,7 +272,9 @@ public final class SpawnManager {
 
         BlockPos feet = BlockPos.containing(position.x(), position.y(), position.z());
         BlockPos head = BlockPos.containing(
-                position.x(), position.y() + player.getBbHeight() - 0.01, position.z());
+                position.x(),
+                position.y() + player.getDimensions(Pose.STANDING).height() - 0.01,
+                position.z());
         return safeBodyBlock(world, feet) && safeBodyBlock(world, head);
     }
 

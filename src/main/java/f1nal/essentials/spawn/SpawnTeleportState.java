@@ -18,16 +18,29 @@ public final class SpawnTeleportState {
         this.clock = clock;
     }
 
-    public Request request(UUID playerId, Origin origin, long warmupMs,
-            boolean bypassCooldown) {
-        long now = clock.getAsLong();
+    public Request precheck(UUID playerId, boolean bypassCooldown) {
+        removeExpiredCooldowns();
         if (pending.containsKey(playerId)) return new Request(RequestResult.ALREADY_PENDING, 0);
-        long remaining = cooldownUntil.getOrDefault(playerId, 0L) - now;
+        long remaining = cooldownUntil.getOrDefault(playerId, 0L) - clock.getAsLong();
         if (!bypassCooldown && remaining > 0) {
             return new Request(RequestResult.COOLDOWN, secondsCeil(remaining));
         }
+        return new Request(RequestResult.READY, 0);
+    }
+
+    public int removeExpiredCooldowns() {
+        long now = clock.getAsLong();
+        int before = cooldownUntil.size();
+        cooldownUntil.values().removeIf(until -> until <= now);
+        return before - cooldownUntil.size();
+    }
+
+    public Request request(UUID playerId, Origin origin, long warmupMs,
+            boolean bypassCooldown) {
+        Request pre = precheck(playerId, bypassCooldown);
+        if (pre.result() != RequestResult.READY) return pre;
         if (warmupMs <= 0) return new Request(RequestResult.READY, 0);
-        pending.put(playerId, new Pending(origin, now + warmupMs));
+        pending.put(playerId, new Pending(origin, clock.getAsLong() + warmupMs));
         return new Request(RequestResult.WARMING_UP, secondsCeil(warmupMs));
     }
 
@@ -51,11 +64,6 @@ public final class SpawnTeleportState {
 
     public void complete(UUID playerId, long cooldownMs) {
         if (cooldownMs > 0) cooldownUntil.put(playerId, clock.getAsLong() + cooldownMs);
-    }
-
-    public void clear(UUID playerId) {
-        pending.remove(playerId);
-        cooldownUntil.remove(playerId);
     }
 
     public void cancelPending(UUID playerId) {

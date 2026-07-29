@@ -77,4 +77,46 @@ class SpawnTeleportStateTest {
         assertEquals(RequestResult.ALREADY_PENDING,
                 state.request(player, origin, 3_000, false).result());
     }
+
+    @Test
+    void precheckReportsCooldownWithoutStartingWarmup() {
+        state.request(player, origin, 0, false);
+        state.complete(player, 5_000);
+
+        var blocked = state.precheck(player, false);
+        assertEquals(RequestResult.COOLDOWN, blocked.result());
+        assertEquals(5, blocked.seconds());
+        assertEquals(RequestResult.READY, state.precheck(player, true).result());
+        assertEquals(TickResult.NONE, state.tick(player, origin, true));
+    }
+
+    @Test
+    void precheckReportsPendingWarmup() {
+        assertEquals(RequestResult.READY, state.precheck(player, false).result());
+        state.request(player, origin, 3_000, false);
+        assertEquals(RequestResult.ALREADY_PENDING,
+                state.precheck(player, false).result());
+    }
+
+    @Test
+    void removeExpiredCooldownsReportsRemovedEntries() {
+        state.request(player, origin, 0, false);
+        state.complete(player, 5_000);
+
+        assertEquals(0, state.removeExpiredCooldowns());
+        now.addAndGet(5_000);
+        assertEquals(1, state.removeExpiredCooldowns());
+        assertEquals(0, state.removeExpiredCooldowns());
+    }
+
+    @Test
+    void requestSweepsExpiredCooldownsOfOtherPlayers() {
+        state.request(player, origin, 0, false);
+        state.complete(player, 5_000);
+        now.addAndGet(5_000);
+
+        state.request(UUID.randomUUID(), origin, 0, false);
+
+        assertEquals(0, state.removeExpiredCooldowns());
+    }
 }

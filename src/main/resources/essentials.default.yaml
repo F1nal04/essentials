@@ -24,16 +24,18 @@ tpa:
   cooldown_seconds: 10
 
 spawn:
-  # Route players to Essentials spawn on their first-ever join or after death.
+  # Route players to the Essentials spawn on their first-ever join.
   first_join: true
-  # Used only when the player has no valid bed, respawn anchor, or other personal point.
+  # Route players to the Essentials spawn after death, but only when they have
+  # no valid bed, respawn anchor, or other personal respawn point.
   respawn: true
   # /spawn timing. Players with the matching bypass permission skip either delay.
   warmup_seconds: 3
   cooldown_seconds: 30
   cancel_on_movement: true
   cancel_on_damage: true
-  # Placeholders: {seconds}. Use & formatting codes.
+  # Messages use & formatting codes. The {seconds} placeholder is replaced
+  # only in warmup_message and cooldown_message.
   set_message: "&aEssentials spawn set."
   teleported_message: "&aTeleported to spawn."
   warmup_message: "&7Teleporting to spawn in &d{seconds}&7 seconds. Do not move or take damage."
