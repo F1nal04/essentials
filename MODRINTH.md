@@ -10,6 +10,7 @@ A lightweight, server-side Fabric toolkit for survival servers and SMPs. Essenti
 
 - Teleport requests with `/tpa`, `/tpahere`, accept, deny, cancel, and `/tpahere all`
 - `/back` after a completed teleport request
+- Persistent `/spawn` and `/setspawn` with safe arrival checks, warm-up, cooldown, and optional first-join/respawn routing
 - 9x3 backpacks with per-player, shared-server, or vanilla ender chest modes
 - A disposable 9x3 inventory with `/disposal`, `/trash`, or `/trashcan`
 
@@ -39,6 +40,8 @@ Ban durations support values such as `30m`, `2h`, `7d`, and `1d12h`. Use `perman
 | Area | Commands | Default access |
 | --- | --- | --- |
 | Teleport requests | `/tpa`, `/tpahere`, `/tpaccept`, `/tpdeny`, `/tpcancel`, `/back` | Everyone |
+| Server spawn | `/spawn` | Everyone |
+| Server spawn administration | `/setspawn` | Operators |
 | Player storage | `/backpack` (`/bp`), `/disposal` (`/trash`, `/trashcan`) | Everyone |
 | Player utilities | `/repair [target]`, `/heal [target]`, `/feed [target]`, `/flight [target]` | Operators |
 | Server status | `/ping [player]`, `/tps` | Everyone |
@@ -65,6 +68,12 @@ The configuration is generated at `config/essentials/essentials.yaml`. Changes t
 | `backpack.mode` | `per_player` | Backpack type: `per_player`, `serverwide`, or `ender_chest` |
 | `tpa.timeout_seconds` | `60` | Time before a teleport request expires |
 | `tpa.cooldown_seconds` | `10` | Cooldown after cancelling a teleport request |
+| `spawn.first_join` | `false` | Sends first-time players to the Essentials spawn |
+| `spawn.respawn` | `false` | Uses the Essentials spawn after death |
+| `spawn.warmup_seconds` | `3` | Delay before `/spawn` teleports |
+| `spawn.cooldown_seconds` | `30` | Delay before `/spawn` can be used again |
+| `spawn.cancel_on_movement` | `true` | Cancels a pending spawn teleport when the player moves |
+| `spawn.cancel_on_damage` | `true` | Cancels a pending spawn teleport when the player takes damage |
 | `tps.healthy.minimum_tps` | `18.0` | Lower bound for healthy TPS coloring |
 | `tps.degraded.minimum_tps` | `15.0` | Lower bound for degraded TPS coloring |
 | `vanish.persist_state` | `true` | Keeps UUID-based vanish state across reconnects and restarts |
@@ -85,7 +94,7 @@ Moderation messages support Minecraft ampersand formatting codes such as `&c` an
 - `ban_message`: `{player}`, `{reason}`, `{moderator}`, `{time}`, `{expires_at}`
 - `kick_message`: `{player}`, `{reason}`, `{moderator}`
 
-Available command configuration names include `repair`, `heal`, `feed`, `flight`, `disposal`, `tpa`, `back`,
+Available command configuration names include `repair`, `heal`, `feed`, `flight`, `disposal`, `tpa`, `back`, `spawn`, `setspawn`,
 `backpack`, `backpacksee`, `enderchestsee`, `inventorysee`, `ban`, `pardon`, `banip`, `pardonip`,
 `kick`, `history`, `ping`, and `tps`.
 

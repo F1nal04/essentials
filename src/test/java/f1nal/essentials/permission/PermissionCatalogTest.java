@@ -32,6 +32,12 @@ class PermissionCatalogTest {
         assertEquals("repair", PermissionCatalog.path("repair"));
         assertEquals("repair.others", PermissionCatalog.path("repair.others"));
         assertEquals("tpahere.all", PermissionCatalog.path("tpahere.all"));
+        assertEquals("spawn", PermissionCatalog.path("spawn"));
+        assertEquals("setspawn", PermissionCatalog.path("setspawn"));
+        assertEquals("spawn.bypass.warmup",
+                PermissionCatalog.path("spawn.bypass.warmup"));
+        assertEquals("spawn.bypass.cooldown",
+                PermissionCatalog.path("spawn.bypass.cooldown"));
         assertEquals("tps", PermissionCatalog.path("tps"));
     }
 }

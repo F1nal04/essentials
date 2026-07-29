@@ -23,6 +23,8 @@ import f1nal.essentials.command.PardonCommand;
 import f1nal.essentials.command.PardonIpCommand;
 import f1nal.essentials.command.PingCommand;
 import f1nal.essentials.command.RepairCommand;
+import f1nal.essentials.command.SetSpawnCommand;
+import f1nal.essentials.command.SpawnCommand;
 import f1nal.essentials.command.TpaCommands;
 import f1nal.essentials.command.TpsCommand;
 import f1nal.essentials.command.WarnCommand;
@@ -40,12 +42,15 @@ import f1nal.essentials.messaging.MessagingManager;
 import f1nal.essentials.mixin.ServerCommonPacketListenerAccessor;
 import f1nal.essentials.moderation.IpAddressUtil;
 import f1nal.essentials.permission.EssentialsPermissions;
+import f1nal.essentials.spawn.SpawnManager;
 import f1nal.essentials.update.UpdateManager;
 import f1nal.essentials.tps.TpsManager;
 import f1nal.essentials.vanish.VanishChatEnforcement;
 import f1nal.essentials.vanish.VanishManager;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
+import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
@@ -117,6 +122,21 @@ public class Essentials implements ModInitializer {
         if (backSettings != null && backSettings.enabled()) {
             CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment)
                     -> BackCommand.register(dispatcher, registryAccess, environment, backSettings)
+            );
+        }
+
+        CommandSettings spawnSettings = commandSettings.get("spawn");
+        if (spawnSettings != null && spawnSettings.enabled()) {
+            CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment)
+                    -> SpawnCommand.register(dispatcher, registryAccess, environment, spawnSettings)
+            );
+        }
+
+        CommandSettings setSpawnSettings = commandSettings.get("setspawn");
+        if (setSpawnSettings != null && setSpawnSettings.enabled()) {
+            CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment)
+                    -> SetSpawnCommand.register(
+                            dispatcher, registryAccess, environment, setSpawnSettings)
             );
         }
 
@@ -253,12 +273,16 @@ public class Essentials implements ModInitializer {
             BackpackManager.initialize(server);
             MessagingManager.initialize();
             VanishManager.initialize(server);
+            SpawnManager.initialize(server);
             TpsManager.start();
             UpdateManager.start(server);
         });
 
         ServerTickEvents.END_SERVER_TICK.register(server
-                -> TpsManager.recordTick(System.nanoTime()));
+                -> {
+                    TpsManager.recordTick(System.nanoTime());
+                    SpawnManager.tick();
+                });
 
         // Save all backpacks when server stops
         ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
@@ -269,6 +293,7 @@ public class Essentials implements ModInitializer {
             f1nal.essentials.command.OfflinePlayerDataManager.finishAll();
             MessagingManager.close();
             VanishManager.close();
+            SpawnManager.close();
             try {
                 ModerationManager.close();
             } catch (java.sql.SQLException e) {
@@ -304,6 +329,7 @@ public class Essentials implements ModInitializer {
         // its menu-close save.
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
             java.util.UUID playerId = handler.getPlayer().getUUID();
+            SpawnManager.onDisconnect(handler.getPlayer());
             VanishManager.onDisconnect(handler.getPlayer());
             BackpackSeeCommand.finishForViewer(playerId);
             if (BackpackSeeCommand.isTargetBeingViewed(playerId)) {
@@ -317,7 +343,18 @@ public class Essentials implements ModInitializer {
 
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
             VanishManager.onJoin(handler.getPlayer());
+            SpawnManager.onJoin(handler.getPlayer());
             UpdateManager.onPlayerJoin(handler.getPlayer());
+        });
+
+        ServerPlayerEvents.AFTER_RESPAWN.register((oldPlayer, newPlayer, alive)
+                -> SpawnManager.onRespawn(newPlayer, alive));
+
+        ServerLivingEntityEvents.ALLOW_DAMAGE.register((entity, source, amount) -> {
+            if (amount > 0 && entity instanceof net.minecraft.server.level.ServerPlayer player) {
+                SpawnManager.onDamage(player);
+            }
+            return true;
         });
     }
 }
