@@ -23,6 +23,8 @@ The primary command is the configured command name. Aliases are shorter alternat
 | `/tpdeny [player]` | None | Denies a teleport request, or the newest request when no player is given. | Everyone |
 | `/tpcancel` | None | Cancels your outgoing teleport request. | Everyone |
 | `/back` | None | Returns to your previous position after a TPA teleport. | Everyone |
+| `/spawn` | None | Teleports to the persistent Essentials server spawn after its configured warm-up. | Everyone |
+| `/setspawn` | None | Saves your current dimension, position, yaw, and pitch as the Essentials server spawn. | Operators |
 | `/inventorysee <player>` | `/isee` | Opens and edits an online or previously joined player's inventory. | Operators |
 | `/enderchestsee <player>` | `/esee` | Opens and edits an online or previously joined player's ender chest. | Operators |
 | `/ban <player> <duration\|permanent> <reason>` | None | Bans an online or previously known offline player. Use `permanent` or `perm` for no expiry. | Operators |
@@ -63,6 +65,7 @@ The backpack has three modes, set via `backpack.mode` in the config:
 - **Automatic Config Migration**: When a mod update changes the config schema, your `essentials.yaml` is migrated automatically — your settings are kept, new options are added with defaults, the old file is backed up to `essentials.yaml.bak`, and a startup log warning lists exactly what changed
 - **TPA System**: Full teleport request system with configurable timeouts, cooldowns, and smart request management
 - **Back Command**: Return to your previous position after TPA teleports with a configurable time window
+- **Server Spawn**: A world-specific, persistent spawn with safe arrival search, optional first-join and respawn routing, and configurable warm-up/cooldown cancellation
 - **Admin Inventory Views**: `/inventorysee` and `/enderchestsee` give operators editable views into online and offline players' inventories and ender chests
 - **Persistent Moderation**: Bans, kicks, warnings, temporary/permanent mutes, revocations, and private staff notes are stored in SQLite, survive restarts, and can be reviewed with `/history` or `/audit`
 - **Private Messaging**: UUID-based replies and persistent ignores, configurable message formats, staff message spy, and server-wide announcements
@@ -87,7 +90,7 @@ The backpack has three modes, set via `backpack.mode` in the config:
 
 ## Configuration
 
-Essentials uses `config/essentials/essentials.yaml`, stores moderation data in `config/essentials/essentials.db`, stores UUID-based ignore relationships in `config/essentials/ignored-players.properties`, and stores persistent vanish state in `config/essentials/vanished-players.properties`. Existing `config/essentials.yaml` files are moved into the new folder automatically. If no configuration file exists, defaults are generated. After a mod update, new options are merged into your existing file automatically (see Automatic Config Migration above).
+Essentials uses `config/essentials/essentials.yaml`, stores moderation data in `config/essentials/essentials.db`, stores UUID-based ignore relationships in `config/essentials/ignored-players.properties`, and stores persistent vanish state in `config/essentials/vanished-players.properties`. The configured server spawn is world-specific and is stored in `<world>/essentials/spawn.properties`. Existing `config/essentials.yaml` files are moved into the new folder automatically. If no configuration file exists, defaults are generated. After a mod update, new options are merged into your existing file automatically (see Automatic Config Migration above).
 
 ### Chat Tag
 
@@ -108,6 +111,21 @@ The TPA system includes the following configurable options:
 - `timeout_seconds` (default: 60) - How long teleport requests last before expiring
 - `cooldown_seconds` (default: 10) - How long to wait after cancelling a request before sending another
 - `window_seconds` for back command (default: 120) - Time window during which `/back` can be used after a TPA teleport
+
+### Server Spawn Configuration
+
+`/setspawn` records the executing player's exact dimension, coordinates, yaw, and pitch independently of
+Minecraft's vanilla world spawn. `/spawn` validates that the dimension is loaded and searches the configured
+point and nearby blocks for solid footing, collision-free headroom, an empty fluid space, and a non-hazardous
+arrival position.
+
+- `first_join` (default: `true`) routes first-time players when an Essentials spawn is configured.
+- `respawn` (default: `true`) routes death respawns only when Essentials spawn is configured and the player has no valid personal respawn point, such as a bed or respawn anchor.
+- Lifecycle routing does not require `essentials.spawn`.
+- `warmup_seconds` (default: `3`) and `cooldown_seconds` (default: `30`) control `/spawn`; each accepts `0` to disable its delay.
+- `cancel_on_movement` and `cancel_on_damage` (default: `true`) cancel pending warm-ups when triggered.
+- The `*_message` entries configure all spawn feedback with Minecraft `&` formatting codes. Warm-up and cooldown messages support `{seconds}`.
+- `commands.spawn` and `commands.setspawn` enable and restrict the two commands independently.
 
 ### Moderation Configuration
 
@@ -191,6 +209,8 @@ Aliases always use their primary command's node. Console execution is unchanged.
 | `/tpdeny` | `essentials.tpdeny` |
 | `/tpcancel` | `essentials.tpcancel` |
 | `/back` | `essentials.back` |
+| `/spawn` | `essentials.spawn` |
+| `/setspawn` | `essentials.setspawn` |
 | `/backpack` (`/bp`) | `essentials.backpack` |
 | `/backpacksee` (`/bpsee`) | `essentials.backpacksee` |
 | `/enderchestsee` (`/esee`) | `essentials.enderchestsee` |
@@ -231,9 +251,11 @@ Granular capabilities use these sub-permissions:
 | Change another player's vanish state | `essentials.vanish.others` |
 | See vanished players and resolve them in commands | `essentials.vanish.see` |
 | Use `/ping <player>` | `essentials.ping.others` |
+| Bypass the `/spawn` warm-up | `essentials.spawn.bypass.warmup` |
+| Bypass the `/spawn` cooldown | `essentials.spawn.bypass.cooldown` |
 
-Without a permission provider, each sub-permission uses its owning command's existing `access` result; it does
-not add a new access tier or require any permission configuration.
+Without a permission provider, most sub-permissions use their owning command's existing `access` result. The
+two spawn bypass permissions instead default to operators, as documented above.
 
 ## Build from source
 

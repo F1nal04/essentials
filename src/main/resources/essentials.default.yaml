@@ -23,6 +23,32 @@ tpa:
   # Cooldown after cancelling a request before you can send another
   cooldown_seconds: 10
 
+spawn:
+  # Route players to the Essentials spawn on their first-ever join.
+  first_join: true
+  # Route players to the Essentials spawn after death, but only when they have
+  # no valid bed, respawn anchor, or other personal respawn point.
+  respawn: true
+  # /spawn timing. Players with the matching bypass permission skip either delay.
+  warmup_seconds: 3
+  cooldown_seconds: 30
+  cancel_on_movement: true
+  cancel_on_damage: true
+  # Messages use & formatting codes. The {seconds} placeholder is replaced
+  # only in warmup_message and cooldown_message.
+  set_message: "&aEssentials spawn set."
+  teleported_message: "&aTeleported to spawn."
+  warmup_message: "&7Teleporting to spawn in &d{seconds}&7 seconds. Do not move or take damage."
+  cooldown_message: "&cYou must wait {seconds} seconds before using /spawn again."
+  movement_cancelled_message: "&cSpawn teleport cancelled because you moved."
+  damage_cancelled_message: "&cSpawn teleport cancelled because you took damage."
+  no_spawn_message: "&cNo Essentials spawn has been configured."
+  unavailable_world_message: "&cThe configured spawn world is unavailable."
+  unsafe_destination_message: "&cNo safe arrival position could be found near spawn."
+  player_only_message: "&cYou must be a player to use this command."
+  already_pending_message: "&cYou already have a pending spawn teleport."
+  save_failed_message: "&cThe spawn location could not be saved."
+
 moderation:
   # Placeholders: {player}, {reason}, {moderator}, {time}, {expires_at}
   # Use & followed by a Minecraft formatting code (for example &c or &l).
@@ -142,6 +168,12 @@ commands:
   back:
     enabled: true
     access: "all"
+  spawn:
+    enabled: true
+    access: "all"
+  setspawn:
+    enabled: true
+    access: "op"
   backpack:
     enabled: true
     access: "all"

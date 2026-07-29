@@ -14,6 +14,7 @@ class CommandConfigTest {
 
     private static final java.util.Set<String> KNOWN = java.util.Set.of(
             "repair", "heal", "feed", "flight", "disposal", "tpa", "back", "backpack", "backpacksee",
+            "spawn", "setspawn",
             "enderchestsee", "inventorysee", "ban", "pardon", "banip", "pardonip", "kick",
             "history", "warn", "mute", "unmute", "note", "msg", "reply", "ignore",
             "msgspy", "msgall", "vanish", "ping", "tps");
@@ -24,6 +25,8 @@ class CommandConfigTest {
         assertTrue(m.keySet().containsAll(KNOWN));
         assertEquals(new CommandSettings(true, "op"), m.get("repair"));
         assertEquals(new CommandSettings(true, "all"), m.get("backpack"));
+        assertEquals(new CommandSettings(true, "all"), m.get("spawn"));
+        assertEquals(new CommandSettings(true, "op"), m.get("setspawn"));
         assertEquals(new CommandSettings(true, "op"), m.get("backpacksee"));
         assertEquals(new CommandSettings(true, "op"), m.get("ban"));
         assertEquals(new CommandSettings(true, "op"), m.get("pardon"));
@@ -66,6 +69,20 @@ class CommandConfigTest {
                 """);
         assertFalse(settings.get("tps").enabled());
         assertEquals("all", settings.get("tps").access());
+    }
+
+    @Test
+    void spawnCommandsCanBeDisabledIndependently() {
+        Map<String, CommandSettings> settings = CommandConfig.parse("""
+                commands:
+                  spawn:
+                    enabled: false
+                  setspawn:
+                    access: "all"
+                """);
+        assertFalse(settings.get("spawn").enabled());
+        assertTrue(settings.get("setspawn").enabled());
+        assertEquals("all", settings.get("setspawn").access());
     }
 
     @Test
