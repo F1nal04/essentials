@@ -49,6 +49,46 @@ spawn:
   already_pending_message: "&cYou already have a pending spawn teleport."
   save_failed_message: "&cThe spawn location could not be saved."
 
+homes:
+  # How many homes a player may keep without a numeric limit permission.
+  default_limit: 1
+  # Highest limit a numeric essentials.home.limit.<number> permission can grant.
+  # essentials.home.limit.unlimited bypasses this cap. Maximum accepted value: 256.
+  maximum_limit: 5
+  # When false, /home only works in the same dimension the home was saved in.
+  allow_cross_dimension: true
+  # /home timing. Players with the matching bypass permission skip either delay.
+  warmup_seconds: 3
+  cooldown_seconds: 30
+  cancel_on_movement: true
+  cancel_on_damage: true
+  # Used when /sethome and /home omit a name. Must match name_pattern.
+  # Stored names are case-insensitive.
+  default_name: "home"
+  # Java regular expression matched against the trimmed name. Names should be
+  # a single word so /home and /delhome can accept them.
+  name_pattern: '^[A-Za-z0-9_\-]{1,32}$'
+  # Messages use & formatting codes. Placeholders: {name}, {seconds}, {limit}, {count}.
+  set_message: "&aHome &d{name}&a set."
+  duplicate_message: "&cYou already have a home named &d{name}&c."
+  invalid_name_message: "&cThat home name is not allowed."
+  limit_message: "&cYou have reached your home limit of {limit}."
+  deleted_message: "&aHome &d{name}&a deleted."
+  missing_message: "&cYou do not have a home named &d{name}&c."
+  no_homes_message: "&7You have no homes."
+  list_message: "&7Homes ({count}): "
+  teleported_message: "&aTeleported to &d{name}&a."
+  warmup_message: "&7Teleporting to &d{name}&7 in &d{seconds}&7 seconds. Do not move or take damage."
+  cooldown_message: "&cYou must wait {seconds} seconds before using /home again."
+  movement_cancelled_message: "&cHome teleport cancelled because you moved."
+  damage_cancelled_message: "&cHome teleport cancelled because you took damage."
+  unavailable_world_message: "&cThe world for home &d{name}&c is unavailable."
+  unsafe_destination_message: "&cNo safe arrival position could be found near &d{name}&c."
+  cross_dimension_message: "&cCross-dimension home teleports are disabled."
+  player_only_message: "&cYou must be a player to use this command."
+  already_pending_message: "&cYou already have a pending home teleport."
+  save_failed_message: "&cThe home could not be saved."
+
 moderation:
   # Placeholders: {player}, {reason}, {moderator}, {time}, {expires_at}
   # Use & followed by a Minecraft formatting code (for example &c or &l).
@@ -174,6 +214,18 @@ commands:
   setspawn:
     enabled: true
     access: "op"
+  home:
+    enabled: true
+    access: "all"
+  sethome:
+    enabled: true
+    access: "all"
+  delhome:
+    enabled: true
+    access: "all"
+  homes:
+    enabled: true
+    access: "all"
   backpack:
     enabled: true
     access: "all"

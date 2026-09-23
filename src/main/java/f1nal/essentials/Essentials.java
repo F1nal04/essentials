@@ -11,18 +11,22 @@ import f1nal.essentials.command.BanCommand;
 import f1nal.essentials.command.BanIpCommand;
 import f1nal.essentials.command.BackpackCommand;
 import f1nal.essentials.command.BackpackSeeCommand;
+import f1nal.essentials.command.DelHomeCommand;
 import f1nal.essentials.command.DisposalCommand;
 import f1nal.essentials.command.EnderChestSeeCommand;
 import f1nal.essentials.command.FeedCommand;
 import f1nal.essentials.command.FlightCommand;
 import f1nal.essentials.command.HealCommand;
 import f1nal.essentials.command.HistoryCommand;
+import f1nal.essentials.command.HomeCommand;
+import f1nal.essentials.command.HomesCommand;
 import f1nal.essentials.command.InventorySeeCommand;
 import f1nal.essentials.command.KickCommand;
 import f1nal.essentials.command.PardonCommand;
 import f1nal.essentials.command.PardonIpCommand;
 import f1nal.essentials.command.PingCommand;
 import f1nal.essentials.command.RepairCommand;
+import f1nal.essentials.command.SetHomeCommand;
 import f1nal.essentials.command.SetSpawnCommand;
 import f1nal.essentials.command.SpawnCommand;
 import f1nal.essentials.command.TpaCommands;
@@ -36,6 +40,7 @@ import f1nal.essentials.command.NoteCommand;
 import f1nal.essentials.config.CommandConfig;
 import f1nal.essentials.config.CommandConfig.CommandSettings;
 import f1nal.essentials.config.ConfigMigrator;
+import f1nal.essentials.home.HomeManager;
 import f1nal.essentials.moderation.ModerationManager;
 import f1nal.essentials.moderation.MuteEnforcement;
 import f1nal.essentials.messaging.MessagingManager;
@@ -137,6 +142,36 @@ public class Essentials implements ModInitializer {
             CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment)
                     -> SetSpawnCommand.register(
                             dispatcher, registryAccess, environment, setSpawnSettings)
+            );
+        }
+
+        CommandSettings homeSettings = commandSettings.get("home");
+        if (homeSettings != null && homeSettings.enabled()) {
+            CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment)
+                    -> HomeCommand.register(dispatcher, registryAccess, environment, homeSettings)
+            );
+        }
+
+        CommandSettings setHomeSettings = commandSettings.get("sethome");
+        if (setHomeSettings != null && setHomeSettings.enabled()) {
+            CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment)
+                    -> SetHomeCommand.register(
+                            dispatcher, registryAccess, environment, setHomeSettings)
+            );
+        }
+
+        CommandSettings delHomeSettings = commandSettings.get("delhome");
+        if (delHomeSettings != null && delHomeSettings.enabled()) {
+            CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment)
+                    -> DelHomeCommand.register(
+                            dispatcher, registryAccess, environment, delHomeSettings)
+            );
+        }
+
+        CommandSettings homesSettings = commandSettings.get("homes");
+        if (homesSettings != null && homesSettings.enabled()) {
+            CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment)
+                    -> HomesCommand.register(dispatcher, registryAccess, environment, homesSettings)
             );
         }
 
@@ -274,6 +309,7 @@ public class Essentials implements ModInitializer {
             MessagingManager.initialize();
             VanishManager.initialize(server);
             SpawnManager.initialize(server);
+            HomeManager.initialize(server);
             TpsManager.start();
             UpdateManager.start(server);
         });
@@ -282,6 +318,7 @@ public class Essentials implements ModInitializer {
                 -> {
                     TpsManager.recordTick(System.nanoTime());
                     SpawnManager.tick();
+                    HomeManager.tick();
                 });
 
         // Save all backpacks when server stops
@@ -294,6 +331,7 @@ public class Essentials implements ModInitializer {
             MessagingManager.close();
             VanishManager.close();
             SpawnManager.close();
+            HomeManager.close();
             try {
                 ModerationManager.close();
             } catch (java.sql.SQLException e) {
@@ -330,6 +368,7 @@ public class Essentials implements ModInitializer {
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
             java.util.UUID playerId = handler.getPlayer().getUUID();
             SpawnManager.onDisconnect(handler.getPlayer());
+            HomeManager.onDisconnect(handler.getPlayer());
             VanishManager.onDisconnect(handler.getPlayer());
             BackpackSeeCommand.finishForViewer(playerId);
             if (BackpackSeeCommand.isTargetBeingViewed(playerId)) {
@@ -353,6 +392,7 @@ public class Essentials implements ModInitializer {
         ServerLivingEntityEvents.ALLOW_DAMAGE.register((entity, source, amount) -> {
             if (amount > 0 && entity instanceof net.minecraft.server.level.ServerPlayer player) {
                 SpawnManager.onDamage(player);
+                HomeManager.onDamage(player);
             }
             return true;
         });
