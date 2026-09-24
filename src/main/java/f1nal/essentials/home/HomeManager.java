@@ -13,6 +13,7 @@ import f1nal.essentials.Essentials;
 import f1nal.essentials.config.HomeConfig;
 import f1nal.essentials.permission.EssentialsPermissions;
 import f1nal.essentials.spawn.SafePositionFinder;
+import f1nal.essentials.spawn.SpawnManager;
 import f1nal.essentials.spawn.SafePositionFinder.Position;
 import f1nal.essentials.spawn.SpawnTeleportState;
 import f1nal.essentials.spawn.SpawnTeleportState.Origin;
@@ -286,7 +287,7 @@ public final class HomeManager {
 
         BlockPos support = BlockPos.containing(position.x(), position.y() - 0.01, position.z());
         BlockState supportState = world.getBlockState(support);
-        if (!supportState.blocksMotion() || isDangerous(supportState)
+        if (!SpawnManager.blocksMotion(supportState) || isDangerous(supportState)
                 || !world.getFluidState(support).isEmpty()) {
             return false;
         }

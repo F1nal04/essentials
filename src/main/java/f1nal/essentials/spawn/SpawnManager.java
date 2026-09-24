@@ -284,7 +284,7 @@ public final class SpawnManager {
     }
 
     /** Same rule as 26.2 {@code BlockState#blocksMotion()}, which 26.3 removed. */
-    private static boolean blocksMotion(BlockState state) {
+    public static boolean blocksMotion(BlockState state) {
         Block block = state.getBlock();
         return block != Blocks.COBWEB && block != Blocks.BAMBOO_SAPLING && state.isSolid();
     }
