@@ -1,6 +1,6 @@
 ## Project
 
-Essentials is a server-side Fabric mod (Minecraft 26.2, Java 25) providing admin and QoL commands for SMP servers: teleport requests, backpacks, moderation (bans/mutes/warnings backed by SQLite), private messaging, and Modrinth update checks. Vanilla clients can connect; the mod also works in singleplayer via the integrated server.
+Essentials is a server-side Fabric mod (Minecraft 26.3, Java 25) providing admin and QoL commands for SMP servers: teleport requests, backpacks, moderation (bans/mutes/warnings backed by SQLite), private messaging, and Modrinth update checks. Vanilla clients can connect; the mod also works in singleplayer via the integrated server.
 
 ## Commands
 

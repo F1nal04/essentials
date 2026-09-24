@@ -265,7 +265,7 @@ public final class SpawnManager {
         BlockPos support = BlockPos.containing(
                 position.x(), position.y() - 0.01, position.z());
         BlockState supportState = world.getBlockState(support);
-        if (!supportState.blocksMotion() || isDangerous(supportState)
+        if (!blocksMotion(supportState) || isDangerous(supportState)
                 || !world.getFluidState(support).isEmpty()) {
             return false;
         }
@@ -281,6 +281,12 @@ public final class SpawnManager {
     private static boolean safeBodyBlock(ServerLevel world, BlockPos position) {
         return world.getFluidState(position).isEmpty()
                 && !isDangerous(world.getBlockState(position));
+    }
+
+    /** Same rule as 26.2 {@code BlockState#blocksMotion()}, which 26.3 removed. */
+    private static boolean blocksMotion(BlockState state) {
+        Block block = state.getBlock();
+        return block != Blocks.COBWEB && block != Blocks.BAMBOO_SAPLING && state.isSolid();
     }
 
     private static boolean isDangerous(BlockState state) {
