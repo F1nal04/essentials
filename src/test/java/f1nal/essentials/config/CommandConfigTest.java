@@ -14,7 +14,7 @@ class CommandConfigTest {
 
     private static final java.util.Set<String> KNOWN = java.util.Set.of(
             "repair", "heal", "feed", "flight", "disposal", "tpa", "back", "backpack", "backpacksee",
-            "spawn", "setspawn",
+            "spawn", "setspawn", "home", "sethome", "delhome", "homes",
             "enderchestsee", "inventorysee", "ban", "pardon", "banip", "pardonip", "kick",
             "history", "warn", "mute", "unmute", "note", "msg", "reply", "ignore",
             "msgspy", "msgall", "vanish", "ping", "tps");
@@ -27,6 +27,10 @@ class CommandConfigTest {
         assertEquals(new CommandSettings(true, "all"), m.get("backpack"));
         assertEquals(new CommandSettings(true, "all"), m.get("spawn"));
         assertEquals(new CommandSettings(true, "op"), m.get("setspawn"));
+        assertEquals(new CommandSettings(true, "all"), m.get("home"));
+        assertEquals(new CommandSettings(true, "all"), m.get("sethome"));
+        assertEquals(new CommandSettings(true, "all"), m.get("delhome"));
+        assertEquals(new CommandSettings(true, "all"), m.get("homes"));
         assertEquals(new CommandSettings(true, "op"), m.get("backpacksee"));
         assertEquals(new CommandSettings(true, "op"), m.get("ban"));
         assertEquals(new CommandSettings(true, "op"), m.get("pardon"));
@@ -83,6 +87,25 @@ class CommandConfigTest {
         assertFalse(settings.get("spawn").enabled());
         assertTrue(settings.get("setspawn").enabled());
         assertEquals("all", settings.get("setspawn").access());
+    }
+
+    @Test
+    void homeCommandsCanBeDisabledIndependently() {
+        Map<String, CommandSettings> settings = CommandConfig.parse("""
+                commands:
+                  home:
+                    enabled: false
+                  sethome:
+                    access: "op"
+                  delhome:
+                    enabled: false
+                """);
+        assertFalse(settings.get("home").enabled());
+        assertTrue(settings.get("sethome").enabled());
+        assertEquals("op", settings.get("sethome").access());
+        assertFalse(settings.get("delhome").enabled());
+        assertEquals("all", settings.get("delhome").access());
+        assertTrue(settings.get("homes").enabled());
     }
 
     @Test

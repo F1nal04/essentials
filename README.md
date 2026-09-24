@@ -25,6 +25,10 @@ The primary command is the configured command name. Aliases are shorter alternat
 | `/back` | None | Returns to your previous position after a TPA teleport. | Everyone |
 | `/spawn` | None | Teleports to the persistent Essentials server spawn after its configured warm-up. | Everyone |
 | `/setspawn` | None | Saves your current dimension, position, yaw, and pitch as the Essentials server spawn. | Operators |
+| `/home [name]` | None | Teleports to a saved home after its configured warm-up. Omitting the name uses the default home. | Everyone |
+| `/sethome [name]` | None | Saves your current dimension, position, yaw, and pitch as a named home. Omitting the name uses the default home. An existing name is rejected. | Everyone |
+| `/delhome <name>` | None | Deletes one of your saved homes. | Everyone |
+| `/homes` | None | Lists your saved homes. Each name suggests `/home <name>` when the client supports clickable chat. | Everyone |
 | `/inventorysee <player>` | `/isee` | Opens and edits an online or previously joined player's inventory. | Operators |
 | `/enderchestsee <player>` | `/esee` | Opens and edits an online or previously joined player's ender chest. | Operators |
 | `/ban <player> <duration\|permanent> <reason>` | None | Bans an online or previously known offline player. Use `permanent` or `perm` for no expiry. | Operators |
@@ -66,6 +70,7 @@ The backpack has three modes, set via `backpack.mode` in the config:
 - **TPA System**: Full teleport request system with configurable timeouts, cooldowns, and smart request management
 - **Back Command**: Return to your previous position after TPA teleports with a configurable time window
 - **Server Spawn**: A world-specific, persistent spawn with safe arrival search, optional first-join and respawn routing, and configurable warm-up/cooldown cancellation
+- **Player Homes**: UUID-owned named homes with safe arrival, configurable limits, warm-up, cooldown, and cross-dimension travel
 - **Admin Inventory Views**: `/inventorysee` and `/enderchestsee` give operators editable views into online and offline players' inventories and ender chests
 - **Persistent Moderation**: Bans, kicks, warnings, temporary/permanent mutes, revocations, and private staff notes are stored in SQLite, survive restarts, and can be reviewed with `/history` or `/audit`
 - **Private Messaging**: UUID-based replies and persistent ignores, configurable message formats, staff message spy, and server-wide announcements
@@ -90,7 +95,7 @@ The backpack has three modes, set via `backpack.mode` in the config:
 
 ## Configuration
 
-Essentials uses `config/essentials/essentials.yaml`, stores moderation data in `config/essentials/essentials.db`, stores UUID-based ignore relationships in `config/essentials/ignored-players.properties`, and stores persistent vanish state in `config/essentials/vanished-players.properties`. The configured server spawn is world-specific and is stored in `<world>/essentials/spawn.properties`. Existing `config/essentials.yaml` files are moved into the new folder automatically. If no configuration file exists, defaults are generated. After a mod update, new options are merged into your existing file automatically (see Automatic Config Migration above).
+Essentials uses `config/essentials/essentials.yaml`, stores moderation data in `config/essentials/essentials.db`, stores UUID-based ignore relationships in `config/essentials/ignored-players.properties`, and stores persistent vanish state in `config/essentials/vanished-players.properties`. The configured server spawn is world-specific and is stored in `<world>/essentials/spawn.properties`. Player homes are stored by UUID in `<world>/essentials/homes.properties`. Existing `config/essentials.yaml` files are moved into the new folder automatically. If no configuration file exists, defaults are generated. After a mod update, new options are merged into your existing file automatically (see Automatic Config Migration above).
 
 ### Chat Tag
 
@@ -126,6 +131,25 @@ arrival position.
 - `cancel_on_movement` and `cancel_on_damage` (default: `true`) cancel pending warm-ups when triggered.
 - The `*_message` entries configure all spawn feedback with Minecraft `&` formatting codes. Warm-up and cooldown messages support `{seconds}`.
 - `commands.spawn` and `commands.setspawn` enable and restrict the two commands independently.
+
+### Player Homes Configuration
+
+`/sethome [name]` records the executing player's exact dimension, coordinates, yaw, and pitch under a
+name owned by their UUID, so homes survive name changes and restarts. `/home [name]` validates that
+the dimension is loaded and searches the saved point and nearby blocks for a safe arrival. Omitting
+the name uses `default_name`. `/delhome <name>` deletes one home. `/homes` lists saved names and, where
+the client supports it, each name suggests `/home <name>`.
+
+- `default_limit` (default: `1`) is how many homes a player may keep without a numeric limit permission.
+- `maximum_limit` (default: `5`, maximum `256`) is the highest `essentials.home.limit.<number>` value that counts. Larger granted numbers are ignored. `essentials.home.limit.unlimited` bypasses the cap.
+- When several numeric limit permissions are granted, the highest valid number replaces `default_limit`.
+- `allow_cross_dimension` (default: `true`) controls whether `/home` may teleport to a home in another dimension.
+- `warmup_seconds` (default: `3`) and `cooldown_seconds` (default: `30`) control `/home`; each accepts `0` to disable its delay.
+- `cancel_on_movement` and `cancel_on_damage` (default: `true`) cancel pending warm-ups when triggered.
+- `default_name` (default: `home`) is used when `/sethome` or `/home` omits a name. `name_pattern` is a Java regular expression; names are matched against it and stored in lower case, so `Home` and `home` are the same home.
+- Setting a name that already exists is rejected. Delete it first to move that home.
+- The `*_message` entries configure home feedback with Minecraft `&` formatting codes. Placeholders are `{name}`, `{seconds}`, `{limit}`, and `{count}`.
+- `commands.home`, `commands.sethome`, `commands.delhome`, and `commands.homes` enable and restrict the four commands independently. Disabling a command prevents it from being registered.
 
 ### Moderation Configuration
 
@@ -211,6 +235,10 @@ Aliases always use their primary command's node. Console execution is unchanged.
 | `/back` | `essentials.back` |
 | `/spawn` | `essentials.spawn` |
 | `/setspawn` | `essentials.setspawn` |
+| `/home` | `essentials.home` |
+| `/sethome` | `essentials.sethome` |
+| `/delhome` | `essentials.delhome` |
+| `/homes` | `essentials.homes` |
 | `/backpack` (`/bp`) | `essentials.backpack` |
 | `/backpacksee` (`/bpsee`) | `essentials.backpacksee` |
 | `/enderchestsee` (`/esee`) | `essentials.enderchestsee` |
@@ -253,9 +281,16 @@ Granular capabilities use these sub-permissions:
 | Use `/ping <player>` | `essentials.ping.others` |
 | Bypass the `/spawn` warm-up | `essentials.spawn.bypass.warmup` |
 | Bypass the `/spawn` cooldown | `essentials.spawn.bypass.cooldown` |
+| Override the default home limit | `essentials.home.limit.<number>` |
+| Bypass the configured home limit | `essentials.home.limit.unlimited` |
+| Bypass the `/home` warm-up | `essentials.home.bypass.warmup` |
+| Bypass the `/home` cooldown | `essentials.home.bypass.cooldown` |
 
 Without a permission provider, most sub-permissions use their owning command's existing `access` result. The
-two spawn bypass permissions instead default to operators, as documented above.
+spawn bypass permissions, and `essentials.home.limit.unlimited`, `essentials.home.bypass.warmup`, and
+`essentials.home.bypass.cooldown`, instead default to operators. Numeric `essentials.home.limit.<number>`
+nodes are not granted by that fallback, so players keep `homes.default_limit`. When several numeric limits
+are granted, the highest number from 1 through `homes.maximum_limit` wins.
 
 ## Build from source
 

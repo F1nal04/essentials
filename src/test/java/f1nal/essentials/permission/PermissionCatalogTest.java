@@ -38,6 +38,14 @@ class PermissionCatalogTest {
                 PermissionCatalog.path("spawn.bypass.warmup"));
         assertEquals("spawn.bypass.cooldown",
                 PermissionCatalog.path("spawn.bypass.cooldown"));
+        assertEquals("home", PermissionCatalog.path("home"));
+        assertEquals("sethome", PermissionCatalog.path("sethome"));
+        assertEquals("delhome", PermissionCatalog.path("delhome"));
+        assertEquals("homes", PermissionCatalog.path("homes"));
+        assertEquals("home.limit.4", PermissionCatalog.path("home.limit.4"));
+        assertEquals("home.limit.unlimited", PermissionCatalog.path("home.limit.unlimited"));
+        assertEquals("home.bypass.warmup", PermissionCatalog.path("home.bypass.warmup"));
+        assertEquals("home.bypass.cooldown", PermissionCatalog.path("home.bypass.cooldown"));
         assertEquals("tps", PermissionCatalog.path("tps"));
     }
 }

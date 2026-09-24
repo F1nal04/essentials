@@ -75,6 +75,10 @@ public final class CommandConfig {
         defaults.put("back", new CommandSettings(true, "all"));
         defaults.put("spawn", new CommandSettings(true, "all"));
         defaults.put("setspawn", new CommandSettings(true, "op"));
+        defaults.put("home", new CommandSettings(true, "all"));
+        defaults.put("sethome", new CommandSettings(true, "all"));
+        defaults.put("delhome", new CommandSettings(true, "all"));
+        defaults.put("homes", new CommandSettings(true, "all"));
         defaults.put("backpack", new CommandSettings(true, "all"));
         defaults.put("backpacksee", new CommandSettings(true, "op"));
         defaults.put("enderchestsee", new CommandSettings(true, "op"));
