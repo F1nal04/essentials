@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.3.1](https://github.com/F1nal04/essentials/compare/v3.3.0...v3.3.1) (2026-09-24)
+
+
+### Bug Fixes
+
+* replace removed BlockState#blocksMotion in HomeManager ([916dfe9](https://github.com/F1nal04/essentials/commit/916dfe9bb7756195ceff790ceea938aa024a8576))
+
 ## [3.3.0](https://github.com/F1nal04/essentials/compare/v3.2.3...v3.3.0) (2026-09-24)
 
 
